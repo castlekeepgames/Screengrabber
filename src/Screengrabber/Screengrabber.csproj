@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RootNamespace>Screengrabber</RootNamespace>
+    <AssemblyName>Screengrabber</AssemblyName>
+    <!-- WFO0003 suggests WinForms' SetHighDpiMode, but this is a WPF host: DPI awareness belongs in app.manifest. -->
+    <!-- WPF0001: Window.ThemeMode (Fluent/Windows 11 look for the Settings window) is still marked experimental. -->
+    <NoWarn>$(NoWarn);WFO0003;WPF0001</NoWarn>
+    <!-- 32-bit so Simple MAPI can load Mailbird's x86-only Mailbird.Mapi.dll (Email share attaches the file). -->
+    <PlatformTarget>x86</PlatformTarget>
+    <!-- A resident tray app: no background GC thread, and let the GC trade a little speed for a smaller heap. -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ApplicationIcon>Screengrabber.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <Product>Screengrabber</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
+    <!-- Regenerate with tools/make-icon.ps1. Embedded too, for the tray icon. -->
+    <EmbeddedResource Include="Screengrabber.ico" LogicalName="Screengrabber.Screengrabber.ico" />
+  </ItemGroup>
+
+</Project>
