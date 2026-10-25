@@ -245,16 +245,21 @@ public partial class App : Application
         return true;
     }
 
+    /// <summary>Registers or removes the sign-in task in the background (it runs schtasks.exe).</summary>
     private void ApplyStartWithWindows()
     {
-        try
+        bool enabled = _settings.StartWithWindows;
+        Task.Run(() =>
         {
-            StartupRegistration.Apply(_settings.StartWithWindows);
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex);
-        }
+            try
+            {
+                StartupRegistration.Apply(enabled);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex);
+            }
+        });
     }
 
     private void OpenSettings()

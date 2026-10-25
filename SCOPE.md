@@ -168,6 +168,7 @@ Recipe fields: `label`, `hotkeyNumber`, `clipboard: image | path | none`, `launc
 | Claude / Codex / Grok session | Their desktop apps expose no way to pick a conversation from outside. They use the same point-and-drop flow as Slack: the user opens the conversation in the app, points, and presses Ctrl+2 (2026-10-24, replacing typed path / drop-on-window) |
 | Distribution (2026-10-24) | Inno Setup installer with a self-contained runtime (no prerequisites), per-user. Unsigned for now |
 | Email on any PC (2026-10-24) | 64-bit app, with a 32-bit MAPI helper for 32-bit-only mail DLLs, and point-and-drop when there's no MAPI. Replaces "the whole app is 32-bit for Mailbird" |
+| Start with Windows (2026-10-24, v1.2.1) | A per-user **scheduled task at sign-in** (10 s delay, no time limit) instead of the HKCU Run key. On a real sign-in, Windows skipped the Run entry: it walks the key by position, and apps that rewrite their own entry as they start shift the newest entries past it. The Run key is only a fallback now. The uninstaller removes the task |
 | Share key (2026-10-24) | **Ctrl+2** instead of Ctrl+3, for opening the picker and for the drop step. Existing settings are migrated |
 
 ## 9. Confirmed during the build

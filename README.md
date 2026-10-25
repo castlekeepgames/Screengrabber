@@ -33,7 +33,7 @@ Drops are real drags: a small blue chip flashes near the spot while the pointer 
 
 ## Install
 
-Download `ScreengrabberSetup-<version>.exe` from [Releases](https://github.com/castlekeepgames/Screengrabber/releases/latest) and run it. It needs no admin rights and nothing else installed (Windows 10 1809+ or 11, 64-bit; the .NET runtime is included). A welcome window then shows the keys and lets you pick the apps to share to.
+Download `ScreengrabberSetup-<version>.exe` from [Releases](https://github.com/castlekeepgames/Screengrabber/releases/latest) and run it. It needs no admin rights and nothing else installed (it starts at sign-in through a per-user scheduled task named Screengrabber, which you can turn off in Settings) (Windows 10 1809+ or 11, 64-bit; the .NET runtime is included). A welcome window then shows the keys and lets you pick the apps to share to.
 
 The installer isn't code-signed yet, so Windows may say "Windows protected your PC": click **More info → Run anyway**.
 

@@ -41,8 +41,12 @@ Source: "..\dist\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs c
 Name: "{userprograms}\{#AppName}"; Filename: "{app}\Screengrabber.exe"; Comment: "Screenshot to anywhere. Opens Settings if already running."
 
 [Registry]
-; The app adds its own "start with Windows" entry; remove it on uninstall.
+; Older versions started with Windows through this Run entry; remove it on uninstall.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "{#AppName}"; ValueType: none; Flags: uninsdeletevalue dontcreatekey
+
+[UninstallRun]
+; Remove the "start at sign-in" task the app creates.
+Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""Screengrabber"" /F"; Flags: runhidden; RunOnceId: "DeleteStartupTask"
 
 [UninstallDelete]
 ; Also remove the folder when an earlier copy (not this installer) created it.
