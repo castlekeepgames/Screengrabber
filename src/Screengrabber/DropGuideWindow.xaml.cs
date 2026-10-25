@@ -23,13 +23,13 @@ public partial class DropGuideWindow : Window
     private readonly Rectangle _workArea;
 
     /// <param name="workArea">Work area (physical pixels) of the monitor the app is on.</param>
-    internal DropGuideWindow(string label, Hotkey dropHotkey, Rectangle workArea)
+    internal DropGuideWindow(string heading, string instruction, Hotkey dropHotkey, Rectangle workArea)
     {
         _workArea = workArea;
         InitializeComponent();
 
-        Heading.Text = $"Share to {label}";
-        StepOne.Text = $"In {label}, open the chat, channel or thread it should go to.";
+        Heading.Text = heading;
+        StepOne.Text = instruction;
         KeyText.Text = dropHotkey.DisplayText;
 
         CloseButton.MouseLeftButtonUp += (_, _) => Close();

@@ -25,20 +25,24 @@ internal static class AppWindows
         return IntPtr.Zero;
     }
 
-    /// <summary>Visible top-level windows of the named process with exactly this title.</summary>
-    public static HashSet<IntPtr> FindWindowsByTitle(string processName, string title)
+    /// <summary>
+    /// Visible top-level windows of other apps titled like a new email with this subject: exactly the subject
+    /// (Mailbird) or the subject followed by more (Outlook's "Screenshot - Message (HTML)").
+    /// </summary>
+    public static HashSet<IntPtr> FindComposeWindows(string subject)
     {
-        var ids = Process.GetProcessesByName(processName).Select(p => { using (p) return (uint)p.Id; }).ToHashSet();
+        uint ourProcess = (uint)Environment.ProcessId;
         var found = new HashSet<IntPtr>();
         var text = new StringBuilder(256);
         Native.EnumWindows((hwnd, _) =>
         {
             Native.GetWindowThreadProcessId(hwnd, out uint pid);
-            if (!ids.Contains(pid) || !Native.IsWindowVisible(hwnd))
+            if (pid == ourProcess || !Native.IsWindowVisible(hwnd))
                 return true;
             text.Clear();
             Native.GetWindowText(hwnd, text, text.Capacity);
-            if (text.ToString() == title)
+            string title = text.ToString();
+            if (title == subject || title.StartsWith(subject + " ", StringComparison.Ordinal))
                 found.Add(hwnd);
             return true;
         }, IntPtr.Zero);
@@ -97,6 +101,29 @@ internal static class AppWindows
         }
     }
 
+    /// <summary>
+    /// Waits for another app's window to come to the front (e.g. after launching something whose process we
+    /// don't know). Returns zero if nothing new appeared in time.
+    /// </summary>
+    public static async Task<IntPtr> WaitForNewForegroundWindow(IntPtr previous, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(150);
+            IntPtr hwnd = Native.GetForegroundWindow();
+            if (hwnd != IntPtr.Zero && hwnd != previous && !IsOurs(hwnd) && Native.IsWindowVisible(hwnd))
+                return hwnd;
+        }
+        return IntPtr.Zero;
+    }
+
+    public static bool IsOurs(IntPtr hwnd)
+    {
+        Native.GetWindowThreadProcessId(hwnd, out uint pid);
+        return pid == (uint)Environment.ProcessId;
+    }
+
     /// <summary>The top-level window under a screen point (physical pixels).</summary>
     public static IntPtr RootWindowAt(System.Drawing.Point point)
     {
@@ -124,9 +151,6 @@ internal static class AppWindows
             return null;
         }
     }
-
-    public static bool IsForeground(string processName) =>
-        string.Equals(ProcessNameOf(Native.GetForegroundWindow()), processName, StringComparison.OrdinalIgnoreCase);
 
     private const uint GA_ROOT = 2;
 

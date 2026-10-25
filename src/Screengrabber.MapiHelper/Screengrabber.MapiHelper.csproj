@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    32-bit Simple MAPI helper for mail programs whose MAPI DLL is 32-bit only (e.g. Mailbird).
+    Targets .NET Framework 4.8, which ships with Windows 10/11, so it needs nothing installed.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x86</PlatformTarget>
+    <!-- Pinned so restore always includes it, also when the main app is published for win-x64. -->
+    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>Screengrabber.MapiHelper</AssemblyName>
+    <RootNamespace>Screengrabber.MapiHelper</RootNamespace>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>

@@ -35,7 +35,8 @@ public partial class ShareTargetsWindow : Window
         Grid.LoadingRow += (_, e) => e.Row.Header = (e.Row.GetIndex() + 1).ToString();
         Grid.SelectionChanged += (_, _) => UpdateButtons();
 
-        AddButton.Click += (_, _) => Add();
+        AddButton.Click += (_, _) => AddInstalledApp();
+        AddCustomButton.Click += (_, _) => Add(new ShareTarget { Label = "New target", Delivery = ShareDelivery.DropAtPointer });
         RemoveButton.Click += (_, _) => Remove();
         UpButton.Click += (_, _) => Move(-1);
         DownButton.Click += (_, _) => Move(+1);
@@ -45,10 +46,16 @@ public partial class ShareTargetsWindow : Window
 
     private ShareTarget? Selected => Grid.SelectedItem as ShareTarget;
 
-    private void Add()
+    private void AddInstalledApp()
+    {
+        var picker = new AppPickerWindow { Owner = this };
+        if (picker.ShowDialog() == true && picker.Selected is InstalledApp app)
+            Add(InstalledApps.ToShareTarget(app));
+    }
+
+    private void Add(ShareTarget target)
     {
         CommitEdits();
-        var target = new ShareTarget { Label = "New target" };
         _rows.Add(target);
         Select(target);
     }
@@ -98,7 +105,7 @@ public partial class ShareTargetsWindow : Window
     private void UpdateButtons()
     {
         int index = Selected is ShareTarget t ? _rows.IndexOf(t) : -1;
-        AddButton.IsEnabled = _rows.Count < MaxTargets;
+        AddButton.IsEnabled = AddCustomButton.IsEnabled = _rows.Count < MaxTargets;
         RemoveButton.IsEnabled = index >= 0;
         UpButton.IsEnabled = index > 0;
         DownButton.IsEnabled = index >= 0 && index < _rows.Count - 1;

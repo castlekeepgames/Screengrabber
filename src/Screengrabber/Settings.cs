@@ -77,6 +77,10 @@ internal sealed class Settings
 
     public List<ShareTarget> ShareTargets { get; set; } = DefaultShareTargets();
 
+    /// <summary>True when there was no settings file yet: this is the first run, so show the welcome window.</summary>
+    [JsonIgnore]
+    public bool IsFirstRun { get; private set; }
+
     /// <summary>
     /// &lt;Desktop&gt;\Screenshots. DesktopDirectory resolves through the Known Folder API,
     /// so OneDrive-redirected desktops land in the right place.
@@ -130,7 +134,7 @@ internal sealed class Settings
         {
             settings = File.Exists(FilePath)
                 ? JsonSerializer.Deserialize<Settings>(File.ReadAllText(FilePath), JsonOptions) ?? new Settings()
-                : new Settings { Version = CurrentVersion };
+                : new Settings { Version = CurrentVersion, IsFirstRun = true };
         }
         catch (Exception ex)
         {
@@ -199,45 +203,17 @@ internal sealed class Settings
         File.WriteAllText(FilePath, JsonSerializer.Serialize(this, JsonOptions));
     }
 
-    private static List<ShareTarget> DefaultShareTargets() => new()
+    /// <summary>
+    /// Just Email, which works on any PC. On first run the welcome window adds the user's own apps
+    /// (see <see cref="InstalledApps"/>).
+    /// </summary>
+    private static List<ShareTarget> DefaultShareTargets() => new() { EmailTarget() };
+
+    /// <summary>Email through the default mail program (attached via MAPI, or a blank email to drop into).</summary>
+    public static ShareTarget EmailTarget() => new()
     {
-        new()
-        {
-            // Slack's own Ctrl+K switcher picks the channel; the user points at the channel or thread to drop into.
-            Label = "Slack",
-            Delivery = ShareDelivery.DropAtPointer,
-            KeysAfterOpening = "Ctrl+K",
-            Launch = @"shell:AppsFolder\com.squirrel.slack.slack",
-            FocusProcess = "slack",
-        },
-        new()
-        {
-            Label = "Email",
-            Method = ShareMethod.Email,
-            Launch = "mailto:?subject=Screenshot",
-            FocusProcess = "Mailbird",
-        },
-        new()
-        {
-            Label = "Claude Code",
-            Delivery = ShareDelivery.DropAtPointer,
-            Launch = @"shell:AppsFolder\Claude_pzs8sxrjxfjjc!Claude",
-            FocusProcess = "claude",
-        },
-        new()
-        {
-            Label = "Grok Bot",
-            Delivery = ShareDelivery.DropAtPointer,
-            Launch = @"%LOCALAPPDATA%\Programs\Grok Bot\Grok Bot.exe",
-            FocusProcess = "Grok Bot",
-        },
-        new()
-        {
-            // The Codex desktop app ships as ChatGPT.exe inside the OpenAI.Codex package.
-            Label = "Codex",
-            Delivery = ShareDelivery.DropAtPointer,
-            Launch = @"shell:AppsFolder\OpenAI.Codex_2p2nqsd0c76g0!App",
-            FocusProcess = "ChatGPT",
-        },
+        Label = "Email",
+        Method = ShareMethod.Email,
+        Launch = "mailto:?subject=Screenshot",
     };
 }

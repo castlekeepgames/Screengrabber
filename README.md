@@ -11,7 +11,7 @@ A Windows tray app for fast screenshots. See [SCOPE.md](SCOPE.md) for the full p
 | Esc / right-click | Cancel the snip |
 | Ctrl+\` after a capture | Copy the file path |
 | Ctrl+1 after a capture | Copy the image to the clipboard |
-| Ctrl+2 after a capture | Share: pick `1` Slack · `2` Email · `3` Claude Code · `4` Grok Bot · `5` Codex |
+| Ctrl+2 after a capture | Share: pick one of your apps by number (`1`, `2`, …) |
 | Ctrl+\` once more | Start a new snip |
 
 Screenshots go to `Desktop\Screenshots` as `Screenshot_YYYY-MM-DD_HH-mm-ss.png`. Nothing is copied to the clipboard until you ask. A panel in the upper right shows the shot for 8 seconds (hover to keep it open). Click the thumbnail to open the image, the filename to show it in its folder, or any of the three rows to do that action.
@@ -22,9 +22,10 @@ Sharing never touches your clipboard and never presses Send:
 
 Pick a target and it comes to the front, with a banner at the top of the screen. Go to the chat, channel or thread it should go to, point at it, and press Ctrl+2 again. The file is dropped right there.
 
-- **Slack:** also opens Slack's channel switcher (Ctrl+K) for you.
-- **Claude Code, Codex, Grok Bot:** open the conversation you want, then point and press Ctrl+2.
-- **Email:** a new Mailbird message with the file attached.
+- **Slack and Discord:** also open their channel switcher (Ctrl+K) for you.
+- **Email:** a new message in your default mail app with the file attached (Outlook classic, Thunderbird, Mailbird…, 64- or 32-bit). Mail apps that can't do that (new Outlook, webmail) get a blank email to point at instead.
+
+On first run Screengrabber offers the apps it finds on your PC (Slack, Discord, Teams, WhatsApp, Telegram, Signal, Claude, ChatGPT, Codex, Grok, Copilot). Add any other app later in Settings → Edit share targets → Add app….
 
 Drops are real drags: a small blue chip flashes near the spot while the pointer carries the file in. You can also drag the panel's thumbnail into any app yourself.
 
@@ -32,19 +33,21 @@ Drops are real drags: a small blue chip flashes near the spot while the pointer 
 
 ## Install
 
-Requires the **32-bit (x86)** .NET 10 Desktop Runtime. The app is 32-bit so Email can use Mailbird's 32-bit MAPI DLL.
+Run `ScreengrabberSetup-<version>.exe`. It needs no admin rights and nothing else installed (Windows 10 1809+ or 11, 64-bit; the .NET runtime is included). A welcome window then shows the keys and lets you pick the apps to share to.
+
+The installer isn't code-signed yet, so Windows may say "Windows protected your PC": click **More info → Run anyway**.
+
+Uninstall from Windows Settings → Apps. Your screenshots and settings are kept.
+
+## Build the installer
+
+Requires the .NET 10 SDK and Inno Setup 6 (`winget install JRSoftware.InnoSetup`).
 
 ```powershell
-.\install.ps1
+.uild-installer.ps1
 ```
 
-This builds `dist\Screengrabber.exe`, installs it to `%LOCALAPPDATA%\Programs\Screengrabber`, adds a Start menu shortcut, and starts it. It starts with Windows unless you turn that off in Settings.
-
-```powershell
-.\install.ps1 -Uninstall
-```
-
-This removes the app, shortcut, and startup entry, and keeps your screenshots and settings.
+This publishes a self-contained 64-bit build (plus the 32-bit email helper, `Screengrabber.MapiHelper.exe`) to `distpp` and compiles `installer\Screengrabber.iss` into `dist\ScreengrabberSetup-<version>.exe`. The version comes from `src/Screengrabber/Screengrabber.csproj`.
 
 ## Develop
 
@@ -52,8 +55,8 @@ This removes the app, shortcut, and startup entry, and keeps your screenshots an
 dotnet run --project src/Screengrabber
 ```
 
-Only one copy runs at a time, so quit the installed one first (tray → Quit).
+Only one copy runs at a time, so quit the installed one first (tray → Quit, or `Screengrabber.exe --quit`).
 
-- Settings: `%APPDATA%\Screengrabber\settings.json`. Edit share targets in Settings → Edit share targets…; hand edits to `shareTargets` also apply the next time you share.
-- Log: `%LOCALAPPDATA%\Screengrabber\screengrabber.log`.
+- Settings: `%APPDATA%\Screengrabber\settings.json`. Delete it to see the first-run welcome again.
+- Log: `%LOCALAPPDATA%\Screengrabber\screengrabber.log`. `Screengrabber.exe --list-apps` logs which share targets it would suggest on this PC.
 - App icon: regenerate `src/Screengrabber/Screengrabber.ico` with `tools/make-icon.ps1`.

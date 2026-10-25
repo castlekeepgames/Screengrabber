@@ -37,7 +37,8 @@
                 <Button x:Name="CancelButton" Content="Cancel" IsCancel="True" MinWidth="88" Margin="8,0,0,0" />
             </StackPanel>
             <StackPanel Orientation="Horizontal">
-                <Button x:Name="AddButton" Content="Add" MinWidth="72" />
+                <Button x:Name="AddButton" Content="Add app…" MinWidth="72" />
+                <Button x:Name="AddCustomButton" Content="Add custom" MinWidth="72" Margin="6,0,0,0" />
                 <Button x:Name="RemoveButton" Content="Remove" MinWidth="72" Margin="6,0,0,0" />
                 <Button x:Name="UpButton" Content="Move up" MinWidth="72" Margin="18,0,0,0" />
                 <Button x:Name="DownButton" Content="Move down" MinWidth="72" Margin="6,0,0,0" />

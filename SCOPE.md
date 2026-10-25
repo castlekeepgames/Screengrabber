@@ -105,7 +105,7 @@ Recipe fields: `label`, `hotkeyNumber`, `clipboard: image | path | none`, `launc
 
 ## 5. Recommended tech stack
 
-**C# / .NET 10 (LTS) + WPF**, published as a single `.exe` (about 350 KB) that uses the shared x86 .NET 10 Desktop Runtime. Built as **32-bit (x86)**, because Mailbird's MAPI DLL is 32-bit only and can't load into a 64-bit process.
+**C# / .NET 10 (LTS) + WPF**, 64-bit, shipped as a self-contained build (runtime included) in an Inno Setup installer. A tiny 32-bit .NET Framework helper handles mail programs whose MAPI DLL is 32-bit only.
 - Native global hotkeys (`RegisterHotKey`), fast startup, proper per-monitor DPI support, easy access to the clipboard, MAPI, and window focusing.
 - Rejected alternatives: **Electron**, which starts too slowly and uses too much memory for a snip tool. **AutoHotkey**, which is great for prototypes but makes the overlay and share UI clunky. **Python**, where packaging and DPI handling are painful.
 
@@ -136,10 +136,17 @@ Recipe fields: `label`, `hotkeyNumber`, `clipboard: image | path | none`, `launc
    - Settings window (tray → Settings…, or launch the app again while it's running): both hotkeys, save folder, panel timeout, copy-image-on-capture, start with Windows, and a button to edit the share targets.
    - Hotkey conflicts: Save refuses a hotkey another app owns. If the capture hotkey can't be registered at startup, a tray notification says so.
    - Tray: Take snip · Open Screenshots folder · Settings… · Pause hotkeys · Quit.
-   - `install.ps1` builds the exe, installs it to `%LOCALAPPDATA%\Programs\Screengrabber`, adds a Start menu shortcut, and starts it. `-Uninstall` removes it all.
+   - `install.ps1` builds the exe, installs it to `%LOCALAPPDATA%\Programs\Screengrabber`, adds a Start menu shortcut, and starts it. `-Uninstall` removes it all. (Replaced by the installer in M5.)
    - Packaged as a **framework-dependent** single exe instead of self-contained. Self-contained would be ~150 MB, and compressing it raises RAM use because everything is unpacked into memory.
    - Memory: idle RAM (working set) is **1–6 MB** after captures, because the app returns memory to Windows once it goes idle. Committed memory is ~175 MB, mostly paged out, and flat over repeated captures. Overlay opens in 100–160 ms, including the first snip after launch (warmed up at startup).
 
+5. **M5 – Shareable:** installer, first-run setup, email for any mail app. ✅ Done 2026-10-24.
+   - `build-installer.ps1` creates `dist\ScreengrabberSetup-<version>.exe` (~51 MB) with Inno Setup: self-contained 64-bit build, per-user install with no admin prompt, Start menu entry, Apps & Features uninstall (keeps settings and screenshots). Closes a running copy first (`--quit`).
+   - First run: a welcome window shows the keys and offers the share apps found on the PC (read from the Start menu's app list, with a small catalog for extras like Ctrl+K). "Add app…" in the editor uses the same list.
+   - Targets no longer need a known process name: the app is launched by its Start menu ID, and Screengrabber follows whichever window comes forward.
+   - Email: the app is 64-bit again. MAPI is tried in-process, then through a 32-bit .NET Framework helper (built into Windows) for 32-bit-only mail DLLs. Without MAPI, a blank email opens for point-and-drop.
+   - The default capture hotkey is the physical key left of 1 on any keyboard layout, labelled with the character it types there.
+   - Not done yet: code signing (SmartScreen warning) and update checks.
 ---
 
 ## 8. Decisions log
@@ -158,6 +165,8 @@ Recipe fields: `label`, `hotkeyNumber`, `clipboard: image | path | none`, `launc
 | Sharing without the clipboard (2026-10-24) | Sharing must not overwrite what the user has copied. Each target **delivers** by: dropping the file on the app, dropping it where the user points, typing its path, or just opening the app. Drops are real drags driven by synthesized mouse input (a drag started purely in code was unreliable). No auto-send |
 | Slack channel + thread, no API | Slack on Windows isn't a Windows Share target, and `slack://` links can't attach files. So Screengrabber opens Slack's own Ctrl+K switcher and the user picks the channel (and thread). Then they point and press Ctrl+2, and the file is dropped there. Works the same for Slack in a browser (Window = `chrome`) |
 | Claude / Codex / Grok session | Their desktop apps expose no way to pick a conversation from outside. They use the same point-and-drop flow as Slack: the user opens the conversation in the app, points, and presses Ctrl+2 (2026-10-24, replacing typed path / drop-on-window) |
+| Distribution (2026-10-24) | Inno Setup installer with a self-contained runtime (no prerequisites), per-user. Unsigned for now |
+| Email on any PC (2026-10-24) | 64-bit app, with a 32-bit MAPI helper for 32-bit-only mail DLLs, and point-and-drop when there's no MAPI. Replaces "the whole app is 32-bit for Mailbird" |
 | Share key (2026-10-24) | **Ctrl+2** instead of Ctrl+3, for opening the picker and for the drop step. Existing settings are migrated |
 
 ## 9. Confirmed during the build

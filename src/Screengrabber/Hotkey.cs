@@ -15,7 +15,8 @@ internal readonly record struct Hotkey(ModifierKeys Modifiers, Key Key)
     private const uint MOD_SHIFT = 0x0004;
     private const uint MOD_WIN = 0x0008;
 
-    public static readonly Hotkey DefaultCapture = new(ModifierKeys.Control, Key.Oem3);
+    /// <summary>Ctrl + the key left of 1, whatever character it types on this keyboard layout.</summary>
+    public static readonly Hotkey DefaultCapture = new(ModifierKeys.Control, KeyLeftOfOne());
     public static readonly Hotkey DefaultCopyImage = new(ModifierKeys.Control, Key.D1);
     public static readonly Hotkey DefaultShare = new(ModifierKeys.Control, Key.D2);
 
@@ -50,8 +51,32 @@ internal readonly record struct Hotkey(ModifierKeys Modifiers, Key Key)
         Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or
         Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin;
 
-    /// <summary>For people: "Ctrl+Shift+`".</summary>
-    public string DisplayText => Join(KeyLabels.TryGetValue(Key, out var label) ? label : KeyName(Key));
+    /// <summary>For people: "Ctrl+Shift+`". Punctuation keys show what they type on the current keyboard layout.</summary>
+    public string DisplayText => Join(LayoutCharacter(Key) ?? (KeyLabels.TryGetValue(Key, out var label) ? label : KeyName(Key)));
+
+    private const uint MAPVK_VK_TO_CHAR = 2;
+    private const uint MAPVK_VSC_TO_VK_EX = 3;
+    /// <summary>Scan code of the physical key left of 1 on standard keyboards (` on US, ^ on German, ² on French).</summary>
+    private const uint ScanCodeLeftOfOne = 0x29;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint MapVirtualKey(uint code, uint mapType);
+
+    private static Key KeyLeftOfOne()
+    {
+        uint vk = MapVirtualKey(ScanCodeLeftOfOne, MAPVK_VSC_TO_VK_EX);
+        return vk == 0 ? Key.Oem3 : KeyInterop.KeyFromVirtualKey((int)vk);
+    }
+
+    /// <summary>The character an OEM punctuation key types on the current layout, or null.</summary>
+    private static string? LayoutCharacter(Key key)
+    {
+        if (!key.ToString().StartsWith("Oem", StringComparison.Ordinal))
+            return null;
+        // The high bit marks a dead key (e.g. ^ on German layouts); the character is still in the low word.
+        char c = (char)(MapVirtualKey((uint)KeyInterop.VirtualKeyFromKey(key), MAPVK_VK_TO_CHAR) & 0xFFFF);
+        return c > ' ' ? c.ToString() : null;
+    }
 
     /// <summary>For settings.json: "Ctrl+Shift+Oem3", with digits as "Ctrl+1".</summary>
     public string StorageText => Join(KeyName(Key));

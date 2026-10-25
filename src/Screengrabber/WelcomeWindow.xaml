@@ -1,0 +1,60 @@
+<Window x:Class="Screengrabber.WelcomeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Welcome to Screengrabber"
+        Width="520"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        ThemeMode="System"
+        UseLayoutRounding="True">
+    <Window.Resources>
+        <Style x:Key="Section" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,20,0,8" />
+        </Style>
+        <Style x:Key="Note" TargetType="TextBlock">
+            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="KeyChip" TargetType="Border">
+            <Setter Property="BorderBrush" Value="#80808080" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="6,1" />
+            <Setter Property="Margin" Value="0,0,10,0" />
+            <Setter Property="MinWidth" Value="64" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="KeyText" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+    </Window.Resources>
+
+    <StackPanel Margin="28,20,28,24">
+        <TextBlock Text="Welcome to Screengrabber" FontSize="22" FontWeight="SemiBold" />
+        <TextBlock Style="{StaticResource Note}" Margin="0,4,0,0"
+                   Text="Screenshots in one keystroke, saved to your Desktop and shared where they need to go." />
+
+        <TextBlock Style="{StaticResource Section}" Text="Keys" />
+        <StackPanel x:Name="KeyRows" />
+        <TextBlock Style="{StaticResource Note}" Margin="0,8,0,0"
+                   Text="Change them anytime: right-click the Screengrabber icon in the system tray → Settings." />
+
+        <TextBlock Style="{StaticResource Section}" Text="Share to" />
+        <TextBlock x:Name="ShareNote" Style="{StaticResource Note}" Margin="0,0,0,8" />
+        <StackPanel x:Name="TargetList" />
+        <TextBlock x:Name="LoadingText" Text="Looking for your apps…" Opacity="0.7" Margin="0,4,0,0" />
+        <Button x:Name="AddAppButton" Content="Add another app…" HorizontalAlignment="Left" Margin="0,10,0,0" />
+
+        <TextBlock Style="{StaticResource Section}" Text="Startup" />
+        <CheckBox x:Name="StartWithWindowsCheck" Content="Start Screengrabber when Windows starts" IsChecked="True" />
+
+        <Button x:Name="DoneButton" Content="Get started" IsDefault="True" MinWidth="120" HorizontalAlignment="Right"
+                Margin="0,24,0,0" Style="{DynamicResource AccentButtonStyle}" />
+    </StackPanel>
+</Window>

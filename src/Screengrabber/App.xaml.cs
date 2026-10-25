@@ -19,6 +19,7 @@ public partial class App : Application
 
     private Mutex? _singleInstance;
     private EventWaitHandle? _showSettingsSignal;
+    private EventWaitHandle? _quitSignal;
     private HotkeyManager? _hotkeys;
     private TrayIcon? _tray;
     private SnipSession? _session;
@@ -37,17 +38,30 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // Launching again (e.g. from the Start menu) while running opens Settings in the running copy.
-        _showSettingsSignal = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\Screengrabber.ShowSettings");
-        _singleInstance = new Mutex(true, @"Local\Screengrabber.SingleInstance", out bool isFirstInstance);
-        if (!isFirstInstance)
+        // Diagnostics: log what app detection finds, then exit.
+        if (Array.IndexOf(e.Args, "--list-apps") >= 0)
         {
-            _showSettingsSignal.Set();
+            ListAppsAndExit();
+            return;
+        }
+
+        // Launching again (e.g. from the Start menu) while running opens Settings in the running copy;
+        // "--quit" (used by the installer and uninstaller) closes it instead.
+        bool quit = Array.IndexOf(e.Args, "--quit") >= 0;
+        _showSettingsSignal = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\Screengrabber.ShowSettings");
+        _quitSignal = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\Screengrabber.Quit");
+        _singleInstance = new Mutex(true, @"Local\Screengrabber.SingleInstance", out bool isFirstInstance);
+        if (!isFirstInstance || quit)
+        {
+            if (!isFirstInstance)
+                (quit ? _quitSignal : _showSettingsSignal).Set();
             Shutdown();
             return;
         }
         ThreadPool.RegisterWaitForSingleObject(_showSettingsSignal,
             (_, _) => Dispatcher.BeginInvoke(OpenSettings), null, Timeout.Infinite, executeOnlyOnce: false);
+        ThreadPool.RegisterWaitForSingleObject(_quitSignal,
+            (_, _) => Dispatcher.BeginInvoke(Shutdown), null, Timeout.Infinite, executeOnlyOnce: true);
 
         DispatcherUnhandledException += OnUnhandledException;
         _settings = Settings.Load(Log.Error);
@@ -68,7 +82,9 @@ public partial class App : Application
         RegisterCaptureHotkey();
         ApplyStartWithWindows();
 
-        if (Array.IndexOf(e.Args, "--settings") >= 0)
+        if (_settings.IsFirstRun)
+            ShowWelcome();
+        else if (Array.IndexOf(e.Args, "--settings") >= 0)
             OpenSettings();
         else if (Array.IndexOf(e.Args, StartupRegistration.StartupArg) < 0)
             _tray.ShowInfo("Screengrabber is running", $"Press {_settings.CaptureHotkey.DisplayText} to take a screenshot.");
@@ -85,6 +101,41 @@ public partial class App : Application
             }
             MemoryTrim.Schedule();
         });
+    }
+
+    private void ShowWelcome()
+    {
+        var welcome = new WelcomeWindow(_settings);
+        welcome.Finished += (_, choice) =>
+        {
+            _settings.ShareTargets = choice.Targets;
+            _settings.StartWithWindows = choice.StartWithWindows;
+            try
+            {
+                _settings.Save();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex);
+            }
+            ApplyStartWithWindows();
+            _tray?.ShowInfo("Screengrabber is ready", $"Press {_settings.CaptureHotkey.DisplayText} to take a screenshot.");
+            MemoryTrim.Schedule();
+        };
+        welcome.Show();
+        welcome.Activate();
+    }
+
+    private async void ListAppsAndExit()
+    {
+        var apps = await InstalledApps.ListAsync();
+        Log.Info($"--list-apps: {apps.Count} apps");
+        foreach (var app in InstalledApps.Suggested(apps))
+        {
+            ShareTarget t = InstalledApps.ToShareTarget(app);
+            Log.Info($"  suggested: {t.Label} | launch={t.Launch} | process={t.FocusProcess ?? "(unknown)"} | keys={t.KeysAfterOpening}");
+        }
+        Shutdown();
     }
 
     /// <summary>
@@ -314,14 +365,19 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// For targets like Slack: the app is in front; wait while the user picks the channel or thread,
+    /// Point-and-drop: the app is in front; wait while the user picks the chat, channel, thread or email,
     /// then drop the file wherever they point when they press the share hotkey again.
     /// </summary>
+    /// <param name="targetWindow">The app's window, or zero if it couldn't be identified.</param>
     private void BeginPointerDrop(ShareTarget target, string imagePath, IntPtr targetWindow)
     {
         _dropGuide?.Close();
         Hotkey key = _settings.ShareHotkey;
-        var guide = new DropGuideWindow(target.Label, key, Forms.Screen.FromHandle(targetWindow).WorkingArea);
+        var screen = targetWindow != IntPtr.Zero ? Forms.Screen.FromHandle(targetWindow) : Forms.Screen.FromPoint(Forms.Cursor.Position);
+        string instruction = target.Method == ShareMethod.Email
+            ? "Find the new email that just opened (your mail app couldn't attach the file itself)."
+            : $"In {target.Label}, open the chat, channel or thread it should go to.";
+        var guide = new DropGuideWindow($"Share to {target.Label}", instruction, key, screen.WorkingArea);
         guide.Closed += (_, _) =>
         {
             if (_dropGuide != guide)
@@ -343,10 +399,11 @@ public partial class App : Application
     {
         System.Drawing.Point point = Forms.Cursor.Position;
         IntPtr window = AppWindows.RootWindowAt(point);
-        if (target.FocusProcess != null &&
-            !string.Equals(AppWindows.ProcessNameOf(window), target.FocusProcess, StringComparison.OrdinalIgnoreCase))
+        bool wrongApp = target.FocusProcess != null &&
+            !string.Equals(AppWindows.ProcessNameOf(window), target.FocusProcess, StringComparison.OrdinalIgnoreCase);
+        if (window == IntPtr.Zero || AppWindows.IsOurs(window) || wrongApp)
         {
-            guide.ShowProblem($"The pointer isn't over {target.Label}. Point at the channel or thread, then press {_settings.ShareHotkey.DisplayText}.");
+            guide.ShowProblem($"The pointer isn't over {target.Label}. Point at where it should go, then press {_settings.ShareHotkey.DisplayText}.");
             return;
         }
 
@@ -420,6 +477,7 @@ public partial class App : Application
         _tray?.Dispose();
         _singleInstance?.Dispose();
         _showSettingsSignal?.Dispose();
+        _quitSignal?.Dispose();
         base.OnExit(e);
     }
 }
