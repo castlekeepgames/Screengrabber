@@ -13,6 +13,7 @@ public partial class App : Application
 {
     private const int CaptureHotkeyId = 1;
     private const int ShareHotkeyId = 2;
+    private const int CopyImageHotkeyId = 3;
     private const int TestHotkeyId = 99;
 
     private Mutex? _singleInstance;
@@ -228,13 +229,8 @@ public partial class App : Application
             byte[] png;
             string path;
             using (shot)
-            {
                 png = await Task.Run(() => ScreenshotStore.EncodePng(shot));
-                path = await Task.Run(() => ScreenshotStore.Save(png, folder));
-
-                if (_settings.CopyImageOnCapture && !_copyPathWhenSaved)
-                    TryClipboard(() => ClipboardHelper.SetImage(shot, png));
-            }
+            path = await Task.Run(() => ScreenshotStore.Save(png, folder));
 
             ShowPanel(path, png, width, workArea);
             if (_copyPathWhenSaved && _panel != null)
@@ -255,26 +251,35 @@ public partial class App : Application
     private void ShowPanel(string path, byte[] png, int imageWidth, Rectangle workArea)
     {
         _panel?.Close();
-        var panel = new PostCapturePanel(path, png, imageWidth, workArea,
-            _settings.PanelTimeout, _settings.CaptureHotkey, _settings.ShareHotkey);
+        var panel = new PostCapturePanel(path, png, imageWidth, workArea, _settings.PanelTimeout,
+            _settings.CaptureHotkey, _settings.CopyImageHotkey, _settings.ShareHotkey);
+        panel.CopyPathRequested += (_, _) => CopyPath(panel);
+        panel.CopyImageRequested += (_, _) => CopyImage(panel);
         panel.ShareRequested += (_, _) => OpenSharePicker();
         panel.Closed += (_, _) =>
         {
             if (_panel != panel)
                 return;
             _panel = null;
+            _hotkeys?.Unregister(CopyImageHotkeyId);
             _hotkeys?.Unregister(ShareHotkeyId);
             MemoryTrim.Schedule();
         };
         _panel = panel;
         panel.ShowInCorner();
 
-        // The share hotkey is only ours while the panel is up, so e.g. Ctrl+Home keeps working everywhere else.
-        // If another app owns it, the panel's share row is still clickable.
-        if (_tray?.Paused != true)
+        // These hotkeys are only ours while the panel is up, so e.g. Ctrl+1 keeps working everywhere else.
+        // If another app owns one, the panel's rows are still clickable.
+        if (_tray?.Paused != true && _hotkeys != null)
         {
+            Hotkey copyImage = _settings.CopyImageHotkey;
             Hotkey share = _settings.ShareHotkey;
-            _hotkeys?.Register(ShareHotkeyId, share.Win32Modifiers, share.VirtualKey, OpenSharePicker);
+            _hotkeys.Register(CopyImageHotkeyId, copyImage.Win32Modifiers, copyImage.VirtualKey, () =>
+            {
+                if (_panel != null)
+                    CopyImage(_panel);
+            });
+            _hotkeys.Register(ShareHotkeyId, share.Win32Modifiers, share.VirtualKey, OpenSharePicker);
         }
     }
 
@@ -308,6 +313,12 @@ public partial class App : Application
     {
         if (TryClipboard(() => ClipboardHelper.SetText(panel.ImagePath)))
             panel.MarkPathCopied();
+    }
+
+    private void CopyImage(PostCapturePanel panel)
+    {
+        if (TryClipboard(() => ClipboardHelper.SetImageFromFile(panel.ImagePath)))
+            panel.MarkImageCopied();
     }
 
     private bool TryClipboard(Action action)

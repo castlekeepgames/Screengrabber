@@ -44,6 +44,9 @@ internal sealed class Settings
     /// <summary>Steps through snip → whole screen → copy path.</summary>
     public Hotkey CaptureHotkey { get; set; } = Hotkey.DefaultCapture;
 
+    /// <summary>Copies the image to the clipboard. Only registered while the post-capture panel is showing.</summary>
+    public Hotkey CopyImageHotkey { get; set; } = Hotkey.DefaultCopyImage;
+
     /// <summary>Opens the share picker. Only registered while the post-capture panel is showing.</summary>
     public Hotkey ShareHotkey { get; set; } = Hotkey.DefaultShare;
 
@@ -51,9 +54,6 @@ internal sealed class Settings
     public string? SaveFolder { get; set; }
 
     public int PanelTimeoutSeconds { get; set; } = 8;
-
-    /// <summary>Put the image itself on the clipboard right after capture, like Snipping Tool.</summary>
-    public bool CopyImageOnCapture { get; set; } = true;
 
     public bool StartWithWindows { get; set; } = true;
 
@@ -79,10 +79,21 @@ internal sealed class Settings
     public static string FilePath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Screengrabber", "settings.json");
 
+    /// <summary>
+    /// File format version. Missing in files written before versioning (reads as 0).
+    /// 2: share hotkey moved from Ctrl+Home to Ctrl+3; image no longer copied automatically.
+    /// </summary>
+    public int Version { get; set; }
+
+    private const int CurrentVersion = 2;
+
+    public static List<ShareTarget> CloneTargets(IEnumerable<ShareTarget> targets) =>
+        JsonSerializer.Deserialize<List<ShareTarget>>(JsonSerializer.Serialize(targets, JsonOptions), JsonOptions)!;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
-        // Keep "Ctrl+Home" readable instead of "Ctrl+Home"; this file is only read locally.
+        // Keep "Ctrl+1" readable rather than escaping the plus sign; this file is only read locally.
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
@@ -99,13 +110,14 @@ internal sealed class Settings
         {
             settings = File.Exists(FilePath)
                 ? JsonSerializer.Deserialize<Settings>(File.ReadAllText(FilePath), JsonOptions) ?? new Settings()
-                : new Settings();
+                : new Settings { Version = CurrentVersion };
         }
         catch (Exception ex)
         {
             log(ex);
-            return new Settings();
+            return new Settings { Version = CurrentVersion };
         }
+        settings.Migrate();
 
         if (!writeBack)
             return settings;
@@ -118,6 +130,14 @@ internal sealed class Settings
             log(ex);
         }
         return settings;
+    }
+
+    private void Migrate()
+    {
+        // Only move the share hotkey if it was still the old default; a deliberate choice is kept.
+        if (Version < 2 && ShareHotkey == new Hotkey(System.Windows.Input.ModifierKeys.Control, System.Windows.Input.Key.Home))
+            ShareHotkey = Hotkey.DefaultShare;
+        Version = CurrentVersion;
     }
 
     public void Save()

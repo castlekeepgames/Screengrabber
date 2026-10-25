@@ -41,6 +41,8 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="8" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="8" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <StackPanel VerticalAlignment="Center">
@@ -50,10 +52,16 @@
             <TextBox x:Name="CaptureHotkeyBox" Grid.Column="1" Style="{StaticResource HotkeyBox}" />
 
             <StackPanel Grid.Row="2" VerticalAlignment="Center">
+                <TextBlock Text="Copy image" />
+                <TextBlock Style="{StaticResource Note}" Text="Only active while the post-capture panel is showing" />
+            </StackPanel>
+            <TextBox x:Name="CopyImageHotkeyBox" Grid.Row="2" Grid.Column="1" Style="{StaticResource HotkeyBox}" />
+
+            <StackPanel Grid.Row="4" VerticalAlignment="Center">
                 <TextBlock Text="Share" />
                 <TextBlock Style="{StaticResource Note}" Text="Only active while the post-capture panel is showing" />
             </StackPanel>
-            <TextBox x:Name="ShareHotkeyBox" Grid.Row="2" Grid.Column="1" Style="{StaticResource HotkeyBox}" />
+            <TextBox x:Name="ShareHotkeyBox" Grid.Row="4" Grid.Column="1" Style="{StaticResource HotkeyBox}" />
         </Grid>
         <TextBlock Style="{StaticResource Note}" Margin="0,8,0,0"
                    Text="Click a box, then press the new combination. If nothing happens, another app already uses that combination. Hotkeys are paused while this window is open." />
@@ -64,7 +72,6 @@
             <Button x:Name="BrowseButton" DockPanel.Dock="Right" Content="Browse…" Margin="6,0,0,0" />
             <TextBox x:Name="FolderBox" />
         </DockPanel>
-        <CheckBox x:Name="CopyImageCheck" Margin="0,10,0,0" Content="Copy the image to the clipboard after each capture" />
 
         <TextBlock Style="{StaticResource Section}" Text="Panel" />
         <StackPanel Orientation="Horizontal">
@@ -80,15 +87,14 @@
         <DockPanel>
             <Button x:Name="EditTargetsButton" DockPanel.Dock="Right" Content="Edit share targets…" Margin="12,0,0,0"
                     VerticalAlignment="Center" />
-            <TextBlock Style="{StaticResource Note}" VerticalAlignment="Center"
-                       Text="Slack, Email, Claude Code, Grok Bot and Codex are set in settings.json. Changes apply the next time you share." />
+            <TextBlock x:Name="TargetsSummary" Style="{StaticResource Note}" VerticalAlignment="Center" />
         </DockPanel>
 
         <TextBlock x:Name="ErrorText" Foreground="#FFDC2626" TextWrapping="Wrap" Margin="0,16,0,0" Visibility="Collapsed" />
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
             <Button x:Name="SaveButton" Content="Save" IsDefault="True" MinWidth="88" Style="{DynamicResource AccentButtonStyle}" />
-            <Button Content="Cancel" IsCancel="True" MinWidth="88" Margin="8,0,0,0" />
+            <Button x:Name="CancelButton" Content="Cancel" IsCancel="True" MinWidth="88" Margin="8,0,0,0" />
         </StackPanel>
     </StackPanel>
 </Window>

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -28,18 +29,25 @@ public partial class PostCapturePanel : Window
     public bool PathCopied { get; private set; }
     internal Rectangle WorkArea => _workArea;
 
-    /// <summary>The "share" row was clicked (same as pressing Ctrl+Home).</summary>
+    /// <summary>The "copy path" row was clicked (same as pressing the capture hotkey).</summary>
+    public event EventHandler? CopyPathRequested;
+
+    /// <summary>The "copy image" row was clicked (same as pressing the copy-image hotkey).</summary>
+    public event EventHandler? CopyImageRequested;
+
+    /// <summary>The "share" row was clicked (same as pressing the share hotkey).</summary>
     public event EventHandler? ShareRequested;
 
     /// <param name="workArea">The monitor's work area in physical pixels.</param>
     internal PostCapturePanel(string imagePath, byte[] png, int imageWidth, Rectangle workArea,
-        TimeSpan autoCloseAfter, Hotkey captureHotkey, Hotkey shareHotkey)
+        TimeSpan autoCloseAfter, Hotkey captureHotkey, Hotkey copyImageHotkey, Hotkey shareHotkey)
     {
         ImagePath = imagePath;
         _workArea = workArea;
         InitializeComponent();
 
         CaptureKeyText.Text = captureHotkey.DisplayText;
+        CopyImageKeyText.Text = copyImageHotkey.DisplayText;
         ShareKeyText.Text = shareHotkey.DisplayText;
 
         FileName.Text = Path.GetFileName(imagePath);
@@ -56,6 +64,8 @@ public partial class PostCapturePanel : Window
         CloseButton.MouseLeftButtonUp += (_, _) => Close();
         FileName.MouseLeftButtonUp += (_, _) => ScreenshotStore.OpenFolder(Path.GetDirectoryName(ImagePath)!, ImagePath);
         Thumbnail.MouseLeftButtonUp += (_, _) => ScreenshotStore.OpenImage(ImagePath);
+        CopyPathRow.MouseLeftButtonUp += (_, _) => CopyPathRequested?.Invoke(this, EventArgs.Empty);
+        CopyImageRow.MouseLeftButtonUp += (_, _) => CopyImageRequested?.Invoke(this, EventArgs.Empty);
         ShareRow.MouseLeftButtonUp += (_, _) => ShareRequested?.Invoke(this, EventArgs.Empty);
 
         SourceInitialized += (_, _) => MakeNonActivating();
@@ -74,9 +84,16 @@ public partial class PostCapturePanel : Window
     internal void MarkPathCopied()
     {
         PathCopied = true;
-        CopyHint.Text = "✓ Path copied";
-        CopyHint.Foreground = new SolidColorBrush(Color.FromRgb(0x4A, 0xDE, 0x80));
-        // Give a full countdown so there's still time to share.
+        MarkDone(CopyPathHint, "✓ Path copied");
+    }
+
+    internal void MarkImageCopied() => MarkDone(CopyImageHint, "✓ Image copied");
+
+    private void MarkDone(TextBlock hint, string text)
+    {
+        hint.Text = text;
+        hint.Foreground = new SolidColorBrush(Color.FromRgb(0x4A, 0xDE, 0x80));
+        // Give a full countdown so there's still time for the next step.
         if (!IsMouseOver)
             RestartTimer();
     }

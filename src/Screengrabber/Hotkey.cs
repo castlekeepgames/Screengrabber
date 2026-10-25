@@ -16,7 +16,8 @@ internal readonly record struct Hotkey(ModifierKeys Modifiers, Key Key)
     private const uint MOD_WIN = 0x0008;
 
     public static readonly Hotkey DefaultCapture = new(ModifierKeys.Control, Key.Oem3);
-    public static readonly Hotkey DefaultShare = new(ModifierKeys.Control, Key.Home);
+    public static readonly Hotkey DefaultCopyImage = new(ModifierKeys.Control, Key.D1);
+    public static readonly Hotkey DefaultShare = new(ModifierKeys.Control, Key.D3);
 
     /// <summary>Keys that are fine as a hotkey with no modifier, because nothing types them.</summary>
     private static readonly HashSet<Key> StandaloneKeys = new()
@@ -52,8 +53,8 @@ internal readonly record struct Hotkey(ModifierKeys Modifiers, Key Key)
     /// <summary>For people: "Ctrl+Shift+`".</summary>
     public string DisplayText => Join(KeyLabels.TryGetValue(Key, out var label) ? label : KeyName(Key));
 
-    /// <summary>For settings.json: "Ctrl+Shift+Oem3".</summary>
-    public string StorageText => Join(Key.ToString());
+    /// <summary>For settings.json: "Ctrl+Shift+Oem3", with digits as "Ctrl+1".</summary>
+    public string StorageText => Join(KeyName(Key));
 
     public override string ToString() => DisplayText;
 
@@ -96,8 +97,11 @@ internal readonly record struct Hotkey(ModifierKeys Modifiers, Key Key)
         }
 
         string keyText = parts[^1];
-        Key key = KeyLabels.FirstOrDefault(kv => kv.Value == keyText).Key;
-        if (key == Key.None && !Enum.TryParse(keyText, ignoreCase: true, out key))
+        // Digits first: Enum.TryParse would read "1" as the numeric value of Key.Cancel.
+        Key key = keyText.Length == 1 && char.IsAsciiDigit(keyText[0])
+            ? Key.D0 + (keyText[0] - '0')
+            : KeyLabels.FirstOrDefault(kv => kv.Value == keyText).Key;
+        if (key == Key.None && (!Enum.TryParse(keyText, ignoreCase: true, out key) || int.TryParse(keyText, out _)))
             throw new FormatException($"Unknown key '{keyText}' in hotkey '{text}'");
         return new Hotkey(modifiers, key);
     }

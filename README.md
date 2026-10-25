@@ -10,10 +10,11 @@ A Windows tray app for fast screenshots. See [SCOPE.md](SCOPE.md) for the full p
 | Ctrl+\` again | Capture the whole monitor under the mouse |
 | Esc / right-click | Cancel the snip |
 | Ctrl+\` after a capture | Copy the file path |
+| Ctrl+1 after a capture | Copy the image to the clipboard |
+| Ctrl+3 after a capture | Share: pick `1` Slack · `2` Email · `3` Claude Code · `4` Grok Bot · `5` Codex |
 | Ctrl+\` once more | Start a new snip |
-| Ctrl+Home after a capture | Share: pick `1` Slack · `2` Email · `3` Claude Code · `4` Grok Bot · `5` Codex |
 
-Screenshots go to `Desktop\Screenshots` as `Screenshot_YYYY-MM-DD_HH-mm-ss.png`, and the image is also copied to the clipboard. A panel in the upper right shows the shot for 8 seconds (hover to keep it open). Click the thumbnail to open the image, the filename to show it in its folder, or "share" to pick a destination.
+Screenshots go to `Desktop\Screenshots` as `Screenshot_YYYY-MM-DD_HH-mm-ss.png`. Nothing is copied to the clipboard until you ask. A panel in the upper right shows the shot for 8 seconds (hover to keep it open). Click the thumbnail to open the image, the filename to show it in its folder, or any of the three rows to do that action.
 
 **Tray icon:** click to snip; right-click for Open Screenshots folder, Settings…, Pause hotkeys, and Quit. Launching Screengrabber again while it's running (for example from the Start menu) opens Settings.
 
@@ -41,6 +42,6 @@ dotnet run --project src/Screengrabber
 
 Only one copy runs at a time, so quit the installed one first (tray → Quit).
 
-- Settings and share targets: `%APPDATA%\Screengrabber\settings.json`. Hand edits to `shareTargets` apply the next time you share; other settings apply on restart or through the Settings window.
+- Settings: `%APPDATA%\Screengrabber\settings.json`. Edit share targets in Settings → Edit share targets…; hand edits to `shareTargets` also apply the next time you share.
 - Log: `%LOCALAPPDATA%\Screengrabber\screengrabber.log`.
 - App icon: regenerate `src/Screengrabber/Screengrabber.ico` with `tools/make-icon.ps1`.

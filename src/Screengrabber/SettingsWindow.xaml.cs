@@ -1,6 +1,7 @@
 using System;
-using System.Diagnostics;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -13,7 +14,9 @@ public partial class SettingsWindow : Window
     private readonly Settings _original;
     private readonly Func<Hotkey, bool> _isHotkeyAvailable;
     private Hotkey _capture;
+    private Hotkey _copyImage;
     private Hotkey _share;
+    private List<ShareTarget> _targets;
 
     /// <summary>Raised with the new settings when the user saves. The caller persists and applies them.</summary>
     internal event EventHandler<Settings>? Saved;
@@ -26,21 +29,29 @@ public partial class SettingsWindow : Window
         InitializeComponent();
 
         _capture = current.CaptureHotkey;
+        _copyImage = current.CopyImageHotkey;
         _share = current.ShareHotkey;
         CaptureHotkeyBox.Text = _capture.DisplayText;
+        CopyImageHotkeyBox.Text = _copyImage.DisplayText;
         ShareHotkeyBox.Text = _share.DisplayText;
         HookUpRecorder(CaptureHotkeyBox, hotkey => _capture = hotkey, () => _capture);
+        HookUpRecorder(CopyImageHotkeyBox, hotkey => _copyImage = hotkey, () => _copyImage);
         HookUpRecorder(ShareHotkeyBox, hotkey => _share = hotkey, () => _share);
 
         FolderBox.Text = current.ResolvedSaveFolder;
-        CopyImageCheck.IsChecked = current.CopyImageOnCapture;
         TimeoutBox.Text = current.PanelTimeoutSeconds.ToString();
         StartWithWindowsCheck.IsChecked = current.StartWithWindows;
 
+        // Fresh from disk, in case settings.json was edited by hand since the app started.
+        _targets = Settings.Load(Log.Error, writeBack: false).ShareTargets;
+        UpdateTargetsSummary();
+
         BrowseButton.Click += (_, _) => BrowseForFolder();
         DefaultFolderButton.Click += (_, _) => FolderBox.Text = Settings.DefaultSaveFolder;
-        EditTargetsButton.Click += (_, _) => Process.Start(new ProcessStartInfo("notepad.exe", $"\"{Settings.FilePath}\""))?.Dispose();
+        EditTargetsButton.Click += (_, _) => EditTargets();
         SaveButton.Click += (_, _) => Save();
+        // IsCancel only closes modal dialogs; this window is modeless.
+        CancelButton.Click += (_, _) => Close();
     }
 
     /// <summary>The box shows the hotkey; while focused, the next key combination pressed replaces it.</summary>
@@ -95,23 +106,37 @@ public partial class SettingsWindow : Window
             FolderBox.Text = dialog.FolderName;
     }
 
+    private void EditTargets()
+    {
+        var editor = new ShareTargetsWindow(_targets) { Owner = this };
+        if (editor.ShowDialog() == true)
+        {
+            _targets = editor.Result;
+            UpdateTargetsSummary();
+        }
+    }
+
+    private void UpdateTargetsSummary() =>
+        TargetsSummary.Text = _targets.Count == 0
+            ? "No share targets."
+            : string.Join(" · ", _targets.Select((t, i) => $"{i + 1} {t.Label}"));
+
     private void Save()
     {
-        if (_capture == _share)
+        var hotkeys = new (string Name, Hotkey Key)[] { ("capture", _capture), ("copy image", _copyImage), ("share", _share) };
+        if (hotkeys.Select(h => h.Key).Distinct().Count() < hotkeys.Length)
         {
-            ShowError("Capture and Share need different hotkeys.");
+            ShowError("Capture, Copy image and Share each need a different hotkey.");
             return;
         }
         // Our own hotkeys are switched off while this window is open, so only other apps can make these fail.
-        if (!_isHotkeyAvailable(_capture))
+        foreach (var (name, key) in hotkeys)
         {
-            ShowError($"{_capture.DisplayText} is already used by another app. Pick a different capture hotkey.");
-            return;
-        }
-        if (!_isHotkeyAvailable(_share))
-        {
-            ShowError($"{_share.DisplayText} is already used by another app. Pick a different share hotkey.");
-            return;
+            if (!_isHotkeyAvailable(key))
+            {
+                ShowError($"{key.DisplayText} is already used by another app. Pick a different {name} hotkey.");
+                return;
+            }
         }
 
         if (!int.TryParse(TimeoutBox.Text.Trim(), out int timeout) || timeout < 2 || timeout > 120)
@@ -133,15 +158,14 @@ public partial class SettingsWindow : Window
 
         Settings updated = _original.Clone();
         updated.CaptureHotkey = _capture;
+        updated.CopyImageHotkey = _copyImage;
         updated.ShareHotkey = _share;
         updated.SaveFolder = string.Equals(Path.GetFullPath(folder), Path.GetFullPath(Settings.DefaultSaveFolder), StringComparison.OrdinalIgnoreCase)
             ? null
             : folder;
-        updated.CopyImageOnCapture = CopyImageCheck.IsChecked == true;
         updated.PanelTimeoutSeconds = timeout;
         updated.StartWithWindows = StartWithWindowsCheck.IsChecked == true;
-        // Keep any hand edits made to the share targets while this window was open.
-        updated.ShareTargets = Settings.Load(Log.Error, writeBack: false).ShareTargets;
+        updated.ShareTargets = _targets;
 
         Saved?.Invoke(this, updated);
         Close();
