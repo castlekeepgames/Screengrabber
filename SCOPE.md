@@ -146,7 +146,8 @@ Recipe fields: `label`, `hotkeyNumber`, `clipboard: image | path | none`, `launc
    - Targets no longer need a known process name: the app is launched by its Start menu ID, and Screengrabber follows whichever window comes forward.
    - Email: the app is 64-bit again. MAPI is tried in-process, then through a 32-bit .NET Framework helper (built into Windows) for 32-bit-only mail DLLs. Without MAPI, a blank email opens for point-and-drop.
    - The default capture hotkey is the physical key left of 1 on any keyboard layout, labelled with the character it types there.
-   - Not done yet: code signing (SmartScreen warning) and update checks.
+   - Not done yet: code signing (SmartScreen warning).
+6. **M6 – Releases and updates:** ✅ Done 2026-10-24. Public repo [castlekeepgames/Screengrabber](https://github.com/castlekeepgames/Screengrabber). Pushing a `v<version>` tag builds the installer on GitHub Actions and publishes a release. The app checks the latest release about a minute after startup and daily, offers it in a notification and the tray menu, downloads it (size and SHA-256 checked), and runs the installer silently. The installer closes the app, upgrades it and restarts it.
 ---
 
 ## 8. Decisions log

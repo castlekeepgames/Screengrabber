@@ -75,6 +75,9 @@ internal sealed class Settings
 
     public bool StartWithWindows { get; set; } = true;
 
+    /// <summary>Look for a newer release on GitHub shortly after startup and once a day.</summary>
+    public bool CheckForUpdates { get; set; } = true;
+
     public List<ShareTarget> ShareTargets { get; set; } = DefaultShareTargets();
 
     /// <summary>True when there was no settings file yet: this is the first run, so show the welcome window.</summary>

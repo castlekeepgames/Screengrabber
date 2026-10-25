@@ -41,6 +41,7 @@ public partial class SettingsWindow : Window
         FolderBox.Text = current.ResolvedSaveFolder;
         TimeoutBox.Text = current.PanelTimeoutSeconds.ToString();
         StartWithWindowsCheck.IsChecked = current.StartWithWindows;
+        CheckForUpdatesCheck.IsChecked = current.CheckForUpdates;
 
         // Fresh from disk, in case settings.json was edited by hand since the app started.
         _targets = Settings.Load(Log.Error, writeBack: false).ShareTargets;
@@ -165,6 +166,7 @@ public partial class SettingsWindow : Window
             : folder;
         updated.PanelTimeoutSeconds = timeout;
         updated.StartWithWindows = StartWithWindowsCheck.IsChecked == true;
+        updated.CheckForUpdates = CheckForUpdatesCheck.IsChecked == true;
         updated.ShareTargets = _targets;
 
         Saved?.Invoke(this, updated);

@@ -82,6 +82,7 @@
 
         <TextBlock Style="{StaticResource Section}" Text="Startup" />
         <CheckBox x:Name="StartWithWindowsCheck" Content="Start Screengrabber when Windows starts" />
+        <CheckBox x:Name="CheckForUpdatesCheck" Content="Check for updates automatically" Margin="0,8,0,0" />
 
         <TextBlock Style="{StaticResource Section}" Text="Share targets" />
         <DockPanel>

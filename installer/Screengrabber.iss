@@ -50,6 +50,8 @@ Type: dirifempty; Name: "{app}"
 
 [Run]
 Filename: "{app}\Screengrabber.exe"; Description: "Start {#AppName} now"; Flags: nowait postinstall skipifsilent
+; In-app updates run the installer silently: start the new version again afterwards.
+Filename: "{app}\Screengrabber.exe"; Parameters: "--updated"; Flags: nowait; Check: WizardSilent
 
 [Code]
 const

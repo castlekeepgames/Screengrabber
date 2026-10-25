@@ -33,9 +33,11 @@ Drops are real drags: a small blue chip flashes near the spot while the pointer 
 
 ## Install
 
-Run `ScreengrabberSetup-<version>.exe`. It needs no admin rights and nothing else installed (Windows 10 1809+ or 11, 64-bit; the .NET runtime is included). A welcome window then shows the keys and lets you pick the apps to share to.
+Download `ScreengrabberSetup-<version>.exe` from [Releases](https://github.com/castlekeepgames/Screengrabber/releases/latest) and run it. It needs no admin rights and nothing else installed (Windows 10 1809+ or 11, 64-bit; the .NET runtime is included). A welcome window then shows the keys and lets you pick the apps to share to.
 
 The installer isn't code-signed yet, so Windows may say "Windows protected your PC": click **More info → Run anyway**.
+
+Screengrabber checks for new versions shortly after it starts and once a day (turn this off in Settings), and offers them in a notification and at the top of the tray menu. Installing an update takes a few seconds and keeps your settings. Tray → Check for updates checks right away.
 
 Uninstall from Windows Settings → Apps. Your screenshots and settings are kept.
 
@@ -49,6 +51,21 @@ Requires the .NET 10 SDK and Inno Setup 6 (`winget install JRSoftware.InnoSetup`
 
 This publishes a self-contained 64-bit build (plus the 32-bit email helper, `Screengrabber.MapiHelper.exe`) to `distpp` and compiles `installer\Screengrabber.iss` into `dist\ScreengrabberSetup-<version>.exe`. The version comes from `src/Screengrabber/Screengrabber.csproj`.
 
+## Release a new version
+
+1. Bump `<Version>` in `src/Screengrabber/Screengrabber.csproj` (e.g. `1.3.0`) and commit.
+2. Tag and push:
+
+   ```bash
+   git tag v1.3.0
+   ```
+
+   ```bash
+   git push origin main v1.3.0
+   ```
+
+GitHub Actions ([release.yml](.github/workflows/release.yml)) builds the installer and publishes it as a release. The tag must match the project version or the build stops. Installed copies pick the update up within a day. Running the workflow by hand (Actions → Release → Run workflow) builds the installer as a downloadable artifact without publishing.
+
 ## Develop
 
 ```bash
@@ -59,4 +76,5 @@ Only one copy runs at a time, so quit the installed one first (tray → Quit, or
 
 - Settings: `%APPDATA%\Screengrabber\settings.json`. Delete it to see the first-run welcome again.
 - Log: `%LOCALAPPDATA%\Screengrabber\screengrabber.log`. `Screengrabber.exe --list-apps` logs which share targets it would suggest on this PC.
+- Test updating from a Debug build: set `SG_PRETEND_VERSION=1.0.0`; it then checks GitHub 5 seconds after starting.
 - App icon: regenerate `src/Screengrabber/Screengrabber.ico` with `tools/make-icon.ps1`.

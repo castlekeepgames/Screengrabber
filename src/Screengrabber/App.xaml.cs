@@ -28,6 +28,9 @@ public partial class App : Application
     private SettingsWindow? _settingsWindow;
     private DropGuideWindow? _dropGuide;
     private Settings _settings = new();
+    private UpdateInfo? _update;
+    private bool _installingUpdate;
+    private DispatcherTimer? _updateTimer;
 
     /// <summary>True between the end of a snip and the panel appearing (encoding + saving).</summary>
     private bool _saving;
@@ -77,13 +80,18 @@ public partial class App : Application
         _tray.SettingsRequested += (_, _) => OpenSettings();
         _tray.PauseToggled += (_, _) => RegisterCaptureHotkey();
         _tray.QuitRequested += (_, _) => Shutdown();
+        _tray.CheckForUpdatesRequested += (_, _) => CheckForUpdates(manual: true);
+        _tray.InstallUpdateRequested += (_, _) => InstallUpdate();
 
         _hotkeys = new HotkeyManager();
         RegisterCaptureHotkey();
         ApplyStartWithWindows();
+        StartUpdateChecks();
 
         if (_settings.IsFirstRun)
             ShowWelcome();
+        else if (Array.IndexOf(e.Args, "--updated") >= 0)
+            _tray.ShowInfo("Screengrabber updated", $"You're now on version {UpdateChecker.CurrentVersion}.");
         else if (Array.IndexOf(e.Args, "--settings") >= 0)
             OpenSettings();
         else if (Array.IndexOf(e.Args, StartupRegistration.StartupArg) < 0)
@@ -101,6 +109,76 @@ public partial class App : Application
             }
             MemoryTrim.Schedule();
         });
+    }
+
+    /// <summary>Checks GitHub for a newer release about a minute after startup, then once a day.</summary>
+    private void StartUpdateChecks()
+    {
+        TimeSpan firstCheck = TimeSpan.FromMinutes(1);
+#if DEBUG
+        // Development builds only check when pretending to be an older version (see UpdateChecker).
+        if (Environment.GetEnvironmentVariable("SG_PRETEND_VERSION") == null)
+            return;
+        firstCheck = TimeSpan.FromSeconds(5);
+#endif
+        _updateTimer = new DispatcherTimer { Interval = firstCheck };
+        _updateTimer.Tick += (_, _) =>
+        {
+            _updateTimer.Interval = TimeSpan.FromHours(24);
+            if (_settings.CheckForUpdates)
+                CheckForUpdates(manual: false);
+        };
+        _updateTimer.Start();
+    }
+
+    /// <param name="manual">From the tray menu: also report "up to date" and errors.</param>
+    private async void CheckForUpdates(bool manual)
+    {
+        try
+        {
+            UpdateInfo? update = await UpdateChecker.CheckAsync();
+            if (update == null)
+            {
+                if (manual)
+                    _tray?.ShowInfo("Screengrabber is up to date", $"You have the latest version ({UpdateChecker.CurrentVersion}).");
+                return;
+            }
+            // Notify once per new version; the tray menu item stays until it's installed.
+            bool isNew = _update?.Version != update.Version;
+            _update = update;
+            Log.Info($"Update available: {update.Version}");
+            _tray?.ShowUpdate(update.Version, notify: manual || isNew);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex);
+            if (manual)
+                _tray?.ShowError("Couldn't check for updates", ex.Message);
+        }
+    }
+
+    private async void InstallUpdate()
+    {
+        if (_update == null || _installingUpdate)
+            return;
+        _installingUpdate = true;
+        try
+        {
+            _tray?.ShowInfo("Downloading update", $"Screengrabber {_update.Version}…");
+            string setup = await UpdateChecker.DownloadAsync(_update);
+            Log.Info($"Update: running {setup}");
+            // The installer closes this app (--quit), upgrades it and starts it again.
+            UpdateChecker.RunInstaller(setup);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex);
+            _tray?.ShowError("Couldn't install the update", $"{ex.Message} You can download it from {UpdateChecker.ReleasesPage}.");
+        }
+        finally
+        {
+            _installingUpdate = false;
+        }
     }
 
     private void ShowWelcome()
