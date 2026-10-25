@@ -4,13 +4,19 @@ using System.Threading.Tasks;
 
 namespace Screengrabber;
 
-/// <summary>Carries out a share recipe for a saved screenshot.</summary>
+/// <summary>Carries out a share recipe for a saved screenshot. Nothing here touches the clipboard.</summary>
 internal static class ShareService
 {
     private const string EmailSubject = "Screenshot";
 
-    /// <summary>Must be called on the UI thread while Screengrabber has the foreground (it hands focus to the target).</summary>
-    public static async Task Share(ShareTarget target, string imagePath)
+    /// <summary>How long a launched (or tray-restored) app gets to show its window.</summary>
+    private static readonly TimeSpan LaunchTimeout = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// Must be called on the UI thread while Screengrabber has the foreground (it hands focus to the target).
+    /// <paramref name="beginPointerDrop"/> takes over for <see cref="ShareDelivery.DropAtPointer"/> targets once the app is in front.
+    /// </summary>
+    public static async Task Share(ShareTarget target, string imagePath, Action<ShareTarget, string, IntPtr> beginPointerDrop)
     {
         if (target.Method == ShareMethod.Email)
         {
@@ -18,13 +24,44 @@ internal static class ShareService
             return;
         }
 
-        SetClipboard(target.Clipboard, imagePath);
-        bool launched = FocusOrLaunch(target);
-
-        if (target.AutoPaste && target.FocusProcess != null)
+        IntPtr window = await FocusOrLaunch(target);
+        if (window == IntPtr.Zero)
         {
-            // A cold start takes a while to get a window up.
-            await AppWindows.PasteInto(target.FocusProcess, TimeSpan.FromSeconds(launched ? 10 : 2));
+            if (target.FocusProcess != null)
+                throw new InvalidOperationException($"{target.Label} didn't open a window.");
+            return; // launched something we can't track (e.g. a URL); nothing more to do
+        }
+        await Task.Delay(300); // let it come forward and repaint
+
+        if (!string.IsNullOrWhiteSpace(target.KeysAfterOpening))
+        {
+            SyntheticInput.Press(Hotkey.Parse(target.KeysAfterOpening));
+            await Task.Delay(200);
+        }
+
+        switch (target.Delivery)
+        {
+            case ShareDelivery.DropOnWindow:
+                // Right of centre and a bit low: the conversation area, not a sidebar.
+                var point = AppWindows.PointIn(window, 0.6, 0.6);
+                if (!await FileDropper.DropAt(imagePath, point.X, point.Y))
+                    throw new InvalidOperationException($"{target.Label} didn't accept the file. You can drag the thumbnail into it instead.");
+                AppWindows.BringToFront(window);
+                break;
+
+            case ShareDelivery.DropAtPointer:
+                beginPointerDrop(target, imagePath, window);
+                break;
+
+            case ShareDelivery.TypePath:
+                // Only type if the app really is in front; typing into the wrong window is worse than doing nothing.
+                if (target.FocusProcess != null && !AppWindows.IsForeground(target.FocusProcess))
+                    throw new InvalidOperationException($"{target.Label} didn't come to the front, so the path wasn't typed.");
+                SyntheticInput.TypeText(imagePath);
+                break;
+
+            case ShareDelivery.OpenOnly:
+                break;
         }
     }
 
@@ -44,8 +81,6 @@ internal static class ShareService
         {
             result = -1; // no MAPI on this system
         }
-        if (result != MapiMail.SUCCESS_SUCCESS)
-            Log.Info($"Email share: MAPISendMail returned {result}");
 
         if (result == MapiMail.SUCCESS_SUCCESS)
         {
@@ -57,10 +92,11 @@ internal static class ShareService
         if (result == MapiMail.MAPI_USER_ABORT)
             return;
 
-        // MAPI unavailable or failed: open a blank message and let the user paste the image.
-        ClipboardHelper.SetImageFromFile(imagePath);
+        // MAPI unavailable or failed: open a blank message and show the file, ready to drag in.
+        Log.Info($"Email share: MAPISendMail returned {result}");
         if (target.Launch != null)
             AppWindows.Launch(target.Launch);
+        ScreenshotStore.OpenFolder(System.IO.Path.GetDirectoryName(imagePath)!, imagePath);
     }
 
     private static async Task FocusNewWindow(string processName, string title, HashSet<IntPtr> existing, TimeSpan timeout)
@@ -101,21 +137,8 @@ internal static class ShareService
         }
     }
 
-    private static void SetClipboard(ClipboardContent content, string imagePath)
-    {
-        switch (content)
-        {
-            case ClipboardContent.Image:
-                ClipboardHelper.SetImageFromFile(imagePath);
-                break;
-            case ClipboardContent.Path:
-                ClipboardHelper.SetText(imagePath);
-                break;
-        }
-    }
-
-    /// <returns>True if the app had to be launched (no window was found).</returns>
-    private static bool FocusOrLaunch(ShareTarget target)
+    /// <returns>The app's main window, or zero if none appeared.</returns>
+    private static async Task<IntPtr> FocusOrLaunch(ShareTarget target)
     {
         if (target.FocusProcess != null)
         {
@@ -123,13 +146,19 @@ internal static class ShareService
             if (hwnd != IntPtr.Zero)
             {
                 AppWindows.BringToFront(hwnd);
-                return false;
+                return hwnd;
             }
         }
 
         // Not running, or hidden in the tray: launching again shows the existing instance for single-instance apps.
         if (target.Launch != null)
             AppWindows.Launch(target.Launch);
-        return true;
+        if (target.FocusProcess == null)
+            return IntPtr.Zero;
+
+        IntPtr launched = await AppWindows.WaitForMainWindow(target.FocusProcess, LaunchTimeout);
+        if (launched != IntPtr.Zero)
+            AppWindows.BringToFront(launched);
+        return launched;
     }
 }

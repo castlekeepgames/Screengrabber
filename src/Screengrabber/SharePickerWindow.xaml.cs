@@ -25,10 +25,15 @@ public partial class SharePickerWindow : Window
     internal event EventHandler<Exception>? ShareFailed;
 
     /// <param name="workArea">The monitor's work area in physical pixels.</param>
-    internal SharePickerWindow(string imagePath, IReadOnlyList<ShareTarget> targets, Rectangle workArea)
+    private readonly Action<ShareTarget, string, IntPtr> _beginPointerDrop;
+
+    /// <param name="beginPointerDrop">Takes over for targets where the user points at the drop spot.</param>
+    internal SharePickerWindow(string imagePath, IReadOnlyList<ShareTarget> targets, Rectangle workArea,
+        Action<ShareTarget, string, IntPtr> beginPointerDrop)
     {
         _imagePath = imagePath;
         _targets = targets;
+        _beginPointerDrop = beginPointerDrop;
         _workArea = workArea;
         InitializeComponent();
 
@@ -134,7 +139,7 @@ public partial class SharePickerWindow : Window
         try
         {
             // The picker stays open (and in the foreground) until the target has focus, so we keep the right to hand it over.
-            await ShareService.Share(target, _imagePath);
+            await ShareService.Share(target, _imagePath, _beginPointerDrop);
         }
         catch (Exception ex)
         {

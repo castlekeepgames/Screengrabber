@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -81,28 +82,38 @@ internal static class AppWindows
         Process.Start(start)?.Dispose();
     }
 
-    /// <summary>Presses Ctrl+V, but only if the expected process ends up in front within the timeout.</summary>
-    public static async Task PasteInto(string processName, TimeSpan timeout)
+    /// <summary>
+    /// Waits for the named process to show a main window (e.g. after launching it, or while a tray app restores itself).
+    /// </summary>
+    public static async Task<IntPtr> WaitForMainWindow(string processName, TimeSpan timeout)
     {
         var deadline = DateTime.UtcNow + timeout;
-        while (DateTime.UtcNow < deadline)
+        while (true)
         {
-            if (ForegroundProcessName() is string name && name.Equals(processName, StringComparison.OrdinalIgnoreCase))
-            {
-                await Task.Delay(150); // let the app finish focusing its input box
-                Native.keybd_event(Native.VK_CONTROL, 0, 0, UIntPtr.Zero);
-                Native.keybd_event(Native.VK_V, 0, 0, UIntPtr.Zero);
-                Native.keybd_event(Native.VK_V, 0, Native.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                Native.keybd_event(Native.VK_CONTROL, 0, Native.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                return;
-            }
-            await Task.Delay(100);
+            IntPtr hwnd = FindMainWindow(processName);
+            if (hwnd != IntPtr.Zero || DateTime.UtcNow >= deadline)
+                return hwnd;
+            await Task.Delay(150);
         }
     }
 
-    private static string? ForegroundProcessName()
+    /// <summary>The top-level window under a screen point (physical pixels).</summary>
+    public static IntPtr RootWindowAt(System.Drawing.Point point)
     {
-        Native.GetWindowThreadProcessId(Native.GetForegroundWindow(), out uint pid);
+        IntPtr hwnd = WindowFromPoint(new Native.POINT { X = point.X, Y = point.Y });
+        return hwnd == IntPtr.Zero ? IntPtr.Zero : GetAncestor(hwnd, GA_ROOT);
+    }
+
+    /// <summary>A point inside the window, as fractions of its width and height.</summary>
+    public static System.Drawing.Point PointIn(IntPtr hwnd, double fx, double fy)
+    {
+        GetWindowRect(hwnd, out RECT r);
+        return new System.Drawing.Point(r.Left + (int)((r.Right - r.Left) * fx), r.Top + (int)((r.Bottom - r.Top) * fy));
+    }
+
+    public static string? ProcessNameOf(IntPtr hwnd)
+    {
+        Native.GetWindowThreadProcessId(hwnd, out uint pid);
         try
         {
             using var process = Process.GetProcessById((int)pid);
@@ -113,4 +124,24 @@ internal static class AppWindows
             return null;
         }
     }
+
+    public static bool IsForeground(string processName) =>
+        string.Equals(ProcessNameOf(Native.GetForegroundWindow()), processName, StringComparison.OrdinalIgnoreCase);
+
+    private const uint GA_ROOT = 2;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left, Top, Right, Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr WindowFromPoint(Native.POINT point);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
 }

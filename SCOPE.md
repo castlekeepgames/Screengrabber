@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-Take a screenshot and get it where it needs to go with as few keystrokes as possible. One hotkey, **Ctrl+\`** (the backtick key just left of 1), drives the whole flow: snip, full screen, save, copy path. After a capture, **Ctrl+1** copies the image and **Ctrl+3** sends the shot to a destination.
+Take a screenshot and get it where it needs to go with as few keystrokes as possible. One hotkey, **Ctrl+\`** (the backtick key just left of 1), drives the whole flow: snip, full screen, save, copy path. After a capture, **Ctrl+1** copies the image and **Ctrl+2** sends the shot to a destination.
 
 **Target user:** one person (me), on Windows 11, who takes a lot of screenshots and pastes them into Slack, email, and AI coding/chat tools.
 
@@ -17,10 +17,10 @@ The app runs in the background with a tray icon. Pressing Ctrl+\` again moves yo
 | **1st** Ctrl+\` | Idle | The screen dims and a crosshair appears. **Snip mode starts right away**, so you just drag a box. Upper-right hint: **"Ctrl+\` for whole screen"** |
 | Drag a box | In snip mode | Captures the region → **saved to `Desktop\Screenshots`** → shows the post-capture panel (below) |
 | **2nd** Ctrl+\` | In snip mode (before dragging) | Captures the **whole monitor the mouse is on** → saved → shows the post-capture panel |
-| **3rd** Ctrl+\` | Post-capture panel visible | Copies the **full file path** to the clipboard. The panel shows "Path copied ✓" and **stays open**, so Ctrl+1 and Ctrl+3 still work |
+| **3rd** Ctrl+\` | Post-capture panel visible | Copies the **full file path** to the clipboard. The panel shows "Path copied ✓" and **stays open**, so Ctrl+1 and Ctrl+2 still work |
 | **4th** Ctrl+\` | Panel visible, path already copied | Closes the panel and starts a **new snip** (so you don't have to wait for the panel to close) |
 | **Ctrl+1** | Post-capture panel visible | Copies the **image** to the clipboard ("Image copied ✓") |
-| **Ctrl+3** | Post-capture panel visible | Opens the **Share picker** |
+| **Ctrl+2** | Post-capture panel visible | Opens the **Share picker** |
 | Esc | Any state | Cancels or closes the overlay or panel (a shot that was already saved stays saved) |
 
 ### Post-capture panel (upper right, small, always on top)
@@ -31,7 +31,7 @@ The app runs in the background with a tray icon. Pressing Ctrl+\` again moves yo
 │ [thumbnail]                      │
 │ Ctrl+`    : copy screenshot path │
 │ Ctrl+1    : copy image           │
-│ Ctrl+3    : share                │
+│ Ctrl+2    : share                │
 └──────────────────────────────────┘
 ```
 
@@ -40,7 +40,7 @@ The app runs in the background with a tray icon. Pressing Ctrl+\` again moves yo
 - Clicking the thumbnail opens the image. Clicking the filename opens the folder with the file selected.
 - After it closes, the next Ctrl+\` starts a **new snip** (step 1 again).
 
-### Share picker (opens on Ctrl+3)
+### Share picker (opens on Ctrl+2)
 
 A small popup with five large buttons, each with its own number key for keyboard-only use:
 
@@ -52,7 +52,7 @@ A small popup with five large buttons, each with its own number key for keyboard
 
 ### 3.1 Hotkeys
 - **Ctrl+\`** is registered globally while the app runs. It is registered by the physical key (virtual key `VK_OEM_3`), so it stays the same key on keyboard layouts where that key isn't a backtick.
-- **Ctrl+1** and **Ctrl+3** are registered **only while the post-capture panel is visible**, so they keep working normally in other apps (e.g. switching browser tabs).
+- **Ctrl+1** and **Ctrl+2** are registered **only while the post-capture panel is visible**, so they keep working normally in other apps (e.g. switching browser tabs).
 - Both hotkeys can be changed in settings.
 - If another app already owns the hotkey, show a tray notification explaining that.
 - Known conflict: VS Code uses Ctrl+\` to show and hide its terminal. While Screengrabber is running, that shortcut won't reach VS Code.
@@ -116,12 +116,12 @@ Recipe fields: `label`, `hotkeyNumber`, `clipboard: image | path | none`, `launc
 1. Ctrl+\` from any app → crosshair overlay ready within 200 ms; dragging a box saves a correct PNG to `Desktop\Screenshots`.
 2. Ctrl+\` twice → a full-screen PNG of the monitor under the cursor is saved.
 3. Ctrl+\` after a capture → `Ctrl+V` in Notepad pastes the exact full path, and the panel is still open.
-4. Ctrl+3 after a capture → share picker opens:
+4. Ctrl+2 after a capture → share picker opens:
    - Slack: Slack is in front, Ctrl+V pastes the image.
    - Email: a new Mailbird message opens with the PNG attached, or with the image ready to paste if MAPI isn't supported.
    - Claude Code / Codex: the desktop app is in front, Ctrl+V pastes the path.
    - Grok Bot: the Grok app is in front, Ctrl+V pastes the image.
-5. Ctrl+1 and Ctrl+3 do nothing special when no panel is showing (normal app behavior is untouched).
+5. Ctrl+1 and Ctrl+2 do nothing special when no panel is showing (normal app behavior is untouched).
 6. Works correctly on a 2-monitor setup with mixed 100% / 150% scaling.
 7. Survives a reboot (starts with Windows) and runs idle at under 50 MB RAM.
 
@@ -153,8 +153,12 @@ Recipe fields: `label`, `hotkeyNumber`, `clipboard: image | path | none`, `launc
 | Claude Code / Codex | **Desktop apps**, with the **file path** on the clipboard |
 | Whole screen | **Monitor under the cursor** |
 | After copying the path | Panel **stays open** so you can still share |
-| Post-capture keys (2026-10-24) | **Ctrl+\`** copy path, **Ctrl+1** copy image, **Ctrl+3** share (was Ctrl+Home). The image is no longer copied automatically, and that setting is gone. Existing settings files are migrated |
+| Post-capture keys (2026-10-24) | **Ctrl+\`** copy path, **Ctrl+1** copy image, **Ctrl+2** share (was Ctrl+Home). The image is no longer copied automatically, and that setting is gone. Existing settings files are migrated |
 | Editing share targets | In-app editor (Settings → Edit share targets…) instead of opening settings.json in Notepad |
+| Sharing without the clipboard (2026-10-24) | Sharing must not overwrite what the user has copied. Each target **delivers** by: dropping the file on the app, dropping it where the user points, typing its path, or just opening the app. Drops are real drags driven by synthesized mouse input (a drag started purely in code was unreliable). No auto-send |
+| Slack channel + thread, no API | Slack on Windows isn't a Windows Share target, and `slack://` links can't attach files. So Screengrabber opens Slack's own Ctrl+K switcher and the user picks the channel (and thread). Then they point and press Ctrl+2, and the file is dropped there. Works the same for Slack in a browser (Window = `chrome`) |
+| Claude / Codex / Grok session | Their desktop apps expose no way to pick a conversation from outside. They use the same point-and-drop flow as Slack: the user opens the conversation in the app, points, and presses Ctrl+2 (2026-10-24, replacing typed path / drop-on-window) |
+| Share key (2026-10-24) | **Ctrl+2** instead of Ctrl+3, for opening the picker and for the drop step. Existing settings are migrated |
 
 ## 9. Confirmed during the build
 

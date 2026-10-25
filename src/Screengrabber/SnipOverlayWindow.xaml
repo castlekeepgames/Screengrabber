@@ -9,7 +9,6 @@
         Topmost="True"
         WindowStartupLocation="Manual"
         Background="Black"
-        Cursor="Cross"
         UseLayoutRounding="True">
     <Grid x:Name="Root">
         <Image x:Name="Frozen" Stretch="Fill" RenderOptions.BitmapScalingMode="NearestNeighbor" />

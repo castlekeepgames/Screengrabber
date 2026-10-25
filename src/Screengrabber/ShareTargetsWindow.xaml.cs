@@ -23,7 +23,13 @@ public partial class ShareTargetsWindow : Window
         _rows = new ObservableCollection<ShareTarget>(Settings.CloneTargets(targets));
 
         MethodColumn.ItemsSource = Enum.GetValues<ShareMethod>();
-        ClipboardColumn.ItemsSource = Enum.GetValues<ClipboardContent>();
+        DeliveryColumn.ItemsSource = new[]
+        {
+            new KeyValuePair<ShareDelivery, string>(ShareDelivery.DropOnWindow, "Drop on app"),
+            new KeyValuePair<ShareDelivery, string>(ShareDelivery.DropAtPointer, "Drop where I point"),
+            new KeyValuePair<ShareDelivery, string>(ShareDelivery.TypePath, "Type the path"),
+            new KeyValuePair<ShareDelivery, string>(ShareDelivery.OpenOnly, "Just open"),
+        };
         Grid.ItemsSource = _rows;
         // Row headers show the number key.
         Grid.LoadingRow += (_, e) => e.Row.Header = (e.Row.GetIndex() + 1).ToString();
@@ -42,7 +48,7 @@ public partial class ShareTargetsWindow : Window
     private void Add()
     {
         CommitEdits();
-        var target = new ShareTarget { Label = "New target", Clipboard = ClipboardContent.Image };
+        var target = new ShareTarget { Label = "New target" };
         _rows.Add(target);
         Select(target);
     }
@@ -113,6 +119,7 @@ public partial class ShareTargetsWindow : Window
             t.Label = t.Label.Trim();
             t.Launch = string.IsNullOrWhiteSpace(t.Launch) ? null : t.Launch.Trim();
             t.FocusProcess = string.IsNullOrWhiteSpace(t.FocusProcess) ? null : t.FocusProcess.Trim();
+            t.KeysAfterOpening = string.IsNullOrWhiteSpace(t.KeysAfterOpening) ? null : t.KeysAfterOpening.Trim();
 
             if (t.Label.Length == 0)
             {
@@ -123,6 +130,23 @@ public partial class ShareTargetsWindow : Window
             {
                 ShowError($"{t.Label} needs something to open, or a window to bring to the front.");
                 return;
+            }
+            if (t.Method == ShareMethod.App && t.FocusProcess == null && t.Delivery != ShareDelivery.OpenOnly)
+            {
+                ShowError($"{t.Label} needs its Window process name, so the file goes into the right app.");
+                return;
+            }
+            if (t.KeysAfterOpening != null)
+            {
+                try
+                {
+                    Hotkey.Parse(t.KeysAfterOpening);
+                }
+                catch (FormatException)
+                {
+                    ShowError($"{t.Label}: \"{t.KeysAfterOpening}\" isn't a key combination. Use something like Ctrl+K.");
+                    return;
+                }
             }
         }
 

@@ -11,10 +11,22 @@ A Windows tray app for fast screenshots. See [SCOPE.md](SCOPE.md) for the full p
 | Esc / right-click | Cancel the snip |
 | Ctrl+\` after a capture | Copy the file path |
 | Ctrl+1 after a capture | Copy the image to the clipboard |
-| Ctrl+3 after a capture | Share: pick `1` Slack · `2` Email · `3` Claude Code · `4` Grok Bot · `5` Codex |
+| Ctrl+2 after a capture | Share: pick `1` Slack · `2` Email · `3` Claude Code · `4` Grok Bot · `5` Codex |
 | Ctrl+\` once more | Start a new snip |
 
 Screenshots go to `Desktop\Screenshots` as `Screenshot_YYYY-MM-DD_HH-mm-ss.png`. Nothing is copied to the clipboard until you ask. A panel in the upper right shows the shot for 8 seconds (hover to keep it open). Click the thumbnail to open the image, the filename to show it in its folder, or any of the three rows to do that action.
+
+### Sharing (Ctrl+2)
+
+Sharing never touches your clipboard and never presses Send:
+
+Pick a target and it comes to the front, with a banner at the top of the screen. Go to the chat, channel or thread it should go to, point at it, and press Ctrl+2 again. The file is dropped right there.
+
+- **Slack:** also opens Slack's channel switcher (Ctrl+K) for you.
+- **Claude Code, Codex, Grok Bot:** open the conversation you want, then point and press Ctrl+2.
+- **Email:** a new Mailbird message with the file attached.
+
+Drops are real drags: a small blue chip flashes near the spot while the pointer carries the file in. You can also drag the panel's thumbnail into any app yourself.
 
 **Tray icon:** click to snip; right-click for Open Screenshots folder, Settings…, Pause hotkeys, and Quit. Launching Screengrabber again while it's running (for example from the Start menu) opens Settings.
 

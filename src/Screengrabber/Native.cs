@@ -51,9 +51,6 @@ internal static class Native
     public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
     public const uint VK_HOME = 0x24;
-    public const byte VK_CONTROL = 0x11;
-    public const byte VK_V = 0x56;
-    public const uint KEYEVENTF_KEYUP = 0x0002;
     public const int SW_RESTORE = 9;
     public const int ASFW_ANY = -1;
 
@@ -112,8 +109,6 @@ internal static class Native
     [DllImport("user32.dll")]
     public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
-    [DllImport("user32.dll")]
-    public static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extraInfo);
 
     [DllImport("user32.dll")]
     public static extern IntPtr MonitorFromPoint(POINT pt, uint dwFlags);

@@ -60,7 +60,7 @@
                                ToolTip="Show in folder" />
                 </DockPanel>
 
-                <Border Margin="0,10" CornerRadius="6" Background="#FF111827" Cursor="Hand" ToolTip="Open image">
+                <Border Margin="0,10" CornerRadius="6" Background="#FF111827" Cursor="Hand" ToolTip="Click to open · drag into any app">
                     <Image x:Name="Thumbnail" MaxHeight="160" Stretch="Uniform" StretchDirection="DownOnly"
                            RenderOptions.BitmapScalingMode="HighQuality" Margin="4" />
                 </Border>
@@ -82,7 +82,7 @@
 
                 <StackPanel x:Name="ShareRow" Orientation="Horizontal" Background="Transparent" Cursor="Hand">
                     <Border Style="{StaticResource KeyChip}">
-                        <TextBlock x:Name="ShareKeyText" Style="{StaticResource KeyText}" Text="Ctrl+3" />
+                        <TextBlock x:Name="ShareKeyText" Style="{StaticResource KeyText}" Text="Ctrl+2" />
                     </Border>
                     <TextBlock Style="{StaticResource HintText}" Text="share" />
                 </StackPanel>

@@ -17,7 +17,7 @@ internal readonly record struct Hotkey(ModifierKeys Modifiers, Key Key)
 
     public static readonly Hotkey DefaultCapture = new(ModifierKeys.Control, Key.Oem3);
     public static readonly Hotkey DefaultCopyImage = new(ModifierKeys.Control, Key.D1);
-    public static readonly Hotkey DefaultShare = new(ModifierKeys.Control, Key.D3);
+    public static readonly Hotkey DefaultShare = new(ModifierKeys.Control, Key.D2);
 
     /// <summary>Keys that are fine as a hotkey with no modifier, because nothing types them.</summary>
     private static readonly HashSet<Key> StandaloneKeys = new()

@@ -9,12 +9,26 @@ namespace Screengrabber;
 
 internal enum ShareMethod
 {
-    /// <summary>Put something on the clipboard and bring an app to the front.</summary>
+    /// <summary>Bring an app to the front and hand it the screenshot (see <see cref="ShareDelivery"/>).</summary>
     App,
-    /// <summary>Open a new email with the file attached (Simple MAPI), falling back to mailto + clipboard.</summary>
+    /// <summary>Open a new email with the file attached (Simple MAPI), falling back to a blank email.</summary>
     Email,
 }
 
+/// <summary>How an App target receives the screenshot. None of these touch the clipboard.</summary>
+internal enum ShareDelivery
+{
+    /// <summary>Drop the file onto the app's window, as if it had been dragged there.</summary>
+    DropOnWindow,
+    /// <summary>Wait while the user picks a spot in the app (e.g. a Slack channel or thread), then drop it where they point.</summary>
+    DropAtPointer,
+    /// <summary>Type the file's path into the app's focused text box.</summary>
+    TypePath,
+    /// <summary>Only bring the app to the front.</summary>
+    OpenOnly,
+}
+
+/// <summary>Pre-version-3 delivery setting, read only to migrate old settings files.</summary>
 internal enum ClipboardContent
 {
     None,
@@ -27,7 +41,7 @@ internal sealed class ShareTarget
 {
     public string Label { get; set; } = "";
     public ShareMethod Method { get; set; } = ShareMethod.App;
-    public ClipboardContent Clipboard { get; set; } = ClipboardContent.Image;
+    public ShareDelivery Delivery { get; set; } = ShareDelivery.DropOnWindow;
 
     /// <summary>Exe path, URI, or <c>shell:AppsFolder\&lt;AppID&gt;</c>. Environment variables are expanded.</summary>
     public string? Launch { get; set; }
@@ -35,8 +49,12 @@ internal sealed class ShareTarget
     /// <summary>Process name (no .exe) whose window is brought to the front if it's already running.</summary>
     public string? FocusProcess { get; set; }
 
-    /// <summary>Press Ctrl+V in the app after focusing it. Off by default: pasting into the wrong window is worse than one keypress.</summary>
-    public bool AutoPaste { get; set; }
+    /// <summary>A key combination to press once the app is in front, e.g. "Ctrl+K" to open Slack's channel switcher.</summary>
+    public string? KeysAfterOpening { get; set; }
+
+    [JsonPropertyName("clipboard")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ClipboardContent? LegacyClipboard { get; set; }
 }
 
 internal sealed class Settings
@@ -82,10 +100,12 @@ internal sealed class Settings
     /// <summary>
     /// File format version. Missing in files written before versioning (reads as 0).
     /// 2: share hotkey moved from Ctrl+Home to Ctrl+3; image no longer copied automatically.
+    /// 3: share targets deliver by drop/typing instead of the clipboard.
+    /// 4: share hotkey Ctrl+3 → Ctrl+2; Claude Code, Codex and Grok Bot use point-and-drop like Slack.
     /// </summary>
     public int Version { get; set; }
 
-    private const int CurrentVersion = 2;
+    private const int CurrentVersion = 4;
 
     public static List<ShareTarget> CloneTargets(IEnumerable<ShareTarget> targets) =>
         JsonSerializer.Deserialize<List<ShareTarget>>(JsonSerializer.Serialize(targets, JsonOptions), JsonOptions)!;
@@ -137,6 +157,39 @@ internal sealed class Settings
         // Only move the share hotkey if it was still the old default; a deliberate choice is kept.
         if (Version < 2 && ShareHotkey == new Hotkey(System.Windows.Input.ModifierKeys.Control, System.Windows.Input.Key.Home))
             ShareHotkey = Hotkey.DefaultShare;
+
+        if (Version < 3)
+        {
+            foreach (var target in ShareTargets)
+            {
+                if (string.Equals(target.FocusProcess, "slack", StringComparison.OrdinalIgnoreCase))
+                {
+                    target.Delivery = ShareDelivery.DropAtPointer;
+                    target.KeysAfterOpening ??= "Ctrl+K";
+                }
+                else
+                {
+                    target.Delivery = target.LegacyClipboard switch
+                    {
+                        ClipboardContent.Path => ShareDelivery.TypePath,
+                        ClipboardContent.None => ShareDelivery.OpenOnly,
+                        _ => ShareDelivery.DropOnWindow,
+                    };
+                }
+                target.LegacyClipboard = null;
+            }
+        }
+
+        if (Version < 4)
+        {
+            if (ShareHotkey == new Hotkey(System.Windows.Input.ModifierKeys.Control, System.Windows.Input.Key.D3))
+                ShareHotkey = Hotkey.DefaultShare;
+            foreach (var target in ShareTargets)
+            {
+                if (target.Method == ShareMethod.App && target.FocusProcess is "claude" or "ChatGPT" or "Grok Bot")
+                    target.Delivery = ShareDelivery.DropAtPointer;
+            }
+        }
         Version = CurrentVersion;
     }
 
@@ -150,8 +203,10 @@ internal sealed class Settings
     {
         new()
         {
+            // Slack's own Ctrl+K switcher picks the channel; the user points at the channel or thread to drop into.
             Label = "Slack",
-            Clipboard = ClipboardContent.Image,
+            Delivery = ShareDelivery.DropAtPointer,
+            KeysAfterOpening = "Ctrl+K",
             Launch = @"shell:AppsFolder\com.squirrel.slack.slack",
             FocusProcess = "slack",
         },
@@ -159,21 +214,20 @@ internal sealed class Settings
         {
             Label = "Email",
             Method = ShareMethod.Email,
-            Clipboard = ClipboardContent.None,
             Launch = "mailto:?subject=Screenshot",
             FocusProcess = "Mailbird",
         },
         new()
         {
             Label = "Claude Code",
-            Clipboard = ClipboardContent.Path,
+            Delivery = ShareDelivery.DropAtPointer,
             Launch = @"shell:AppsFolder\Claude_pzs8sxrjxfjjc!Claude",
             FocusProcess = "claude",
         },
         new()
         {
             Label = "Grok Bot",
-            Clipboard = ClipboardContent.Image,
+            Delivery = ShareDelivery.DropAtPointer,
             Launch = @"%LOCALAPPDATA%\Programs\Grok Bot\Grok Bot.exe",
             FocusProcess = "Grok Bot",
         },
@@ -181,7 +235,7 @@ internal sealed class Settings
         {
             // The Codex desktop app ships as ChatGPT.exe inside the OpenAI.Codex package.
             Label = "Codex",
-            Clipboard = ClipboardContent.Path,
+            Delivery = ShareDelivery.DropAtPointer,
             Launch = @"shell:AppsFolder\OpenAI.Codex_2p2nqsd0c76g0!App",
             FocusProcess = "ChatGPT",
         },

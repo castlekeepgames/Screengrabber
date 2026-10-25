@@ -63,12 +63,41 @@ public partial class PostCapturePanel : Window
 
         CloseButton.MouseLeftButtonUp += (_, _) => Close();
         FileName.MouseLeftButtonUp += (_, _) => ScreenshotStore.OpenFolder(Path.GetDirectoryName(ImagePath)!, ImagePath);
-        Thumbnail.MouseLeftButtonUp += (_, _) => ScreenshotStore.OpenImage(ImagePath);
+        HookUpThumbnailDrag();
         CopyPathRow.MouseLeftButtonUp += (_, _) => CopyPathRequested?.Invoke(this, EventArgs.Empty);
         CopyImageRow.MouseLeftButtonUp += (_, _) => CopyImageRequested?.Invoke(this, EventArgs.Empty);
         ShareRow.MouseLeftButtonUp += (_, _) => ShareRequested?.Invoke(this, EventArgs.Empty);
 
         SourceInitialized += (_, _) => MakeNonActivating();
+    }
+
+    /// <summary>Click opens the image; dragging carries the file into any app (no clipboard involved).</summary>
+    private void HookUpThumbnailDrag()
+    {
+        Point? pressedAt = null;
+        Thumbnail.MouseLeftButtonDown += (_, e) => pressedAt = e.GetPosition(Thumbnail);
+        Thumbnail.MouseLeftButtonUp += (_, _) =>
+        {
+            if (pressedAt != null)
+                ScreenshotStore.OpenImage(ImagePath);
+            pressedAt = null;
+        };
+        Thumbnail.MouseMove += (_, e) =>
+        {
+            if (pressedAt is not Point start || e.LeftButton != MouseButtonState.Pressed)
+                return;
+            Vector moved = e.GetPosition(Thumbnail) - start;
+            if (Math.Abs(moved.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                Math.Abs(moved.Y) < SystemParameters.MinimumVerticalDragDistance)
+                return;
+
+            pressedAt = null; // a drag, not a click
+            _closeTimer.Stop();
+            DragDrop.DoDragDrop(Thumbnail, new DataObject(DataFormats.FileDrop, new[] { ImagePath }),
+                DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link);
+            if (!IsMouseOver)
+                RestartTimer();
+        };
     }
 
     internal void ShowInCorner()

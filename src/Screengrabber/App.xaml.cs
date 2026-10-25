@@ -14,6 +14,7 @@ public partial class App : Application
     private const int CaptureHotkeyId = 1;
     private const int ShareHotkeyId = 2;
     private const int CopyImageHotkeyId = 3;
+    private const int DropHotkeyId = 4;
     private const int TestHotkeyId = 99;
 
     private Mutex? _singleInstance;
@@ -24,6 +25,7 @@ public partial class App : Application
     private PostCapturePanel? _panel;
     private SharePickerWindow? _picker;
     private SettingsWindow? _settingsWindow;
+    private DropGuideWindow? _dropGuide;
     private Settings _settings = new();
 
     /// <summary>True between the end of a snip and the panel appearing (encoding + saving).</summary>
@@ -136,6 +138,7 @@ public partial class App : Application
 
         _picker?.Close();
         _panel?.Close();
+        _dropGuide?.Close();
 
         var window = new SettingsWindow(_settings, IsHotkeyAvailable);
         window.Saved += (_, saved) =>
@@ -194,6 +197,7 @@ public partial class App : Application
     private async void StartSnip(TimeSpan delay)
     {
         _picker?.Close();
+        _dropGuide?.Close();
         if (_panel != null)
         {
             _panel.Close();
@@ -290,7 +294,7 @@ public partial class App : Application
 
         // Re-read share targets so hand edits to settings.json apply without a restart.
         var targets = Settings.Load(Log.Error, writeBack: false).ShareTargets;
-        var picker = new SharePickerWindow(_panel.ImagePath, targets, _panel.WorkArea);
+        var picker = new SharePickerWindow(_panel.ImagePath, targets, _panel.WorkArea, BeginPointerDrop);
         picker.ShareFailed += (_, ex) =>
         {
             Log.Error(ex);
@@ -307,6 +311,64 @@ public partial class App : Application
         // The picker takes over from the panel.
         _panel.Close();
         picker.ShowCentered();
+    }
+
+    /// <summary>
+    /// For targets like Slack: the app is in front; wait while the user picks the channel or thread,
+    /// then drop the file wherever they point when they press the share hotkey again.
+    /// </summary>
+    private void BeginPointerDrop(ShareTarget target, string imagePath, IntPtr targetWindow)
+    {
+        _dropGuide?.Close();
+        Hotkey key = _settings.ShareHotkey;
+        var guide = new DropGuideWindow(target.Label, key, Forms.Screen.FromHandle(targetWindow).WorkingArea);
+        guide.Closed += (_, _) =>
+        {
+            if (_dropGuide != guide)
+                return;
+            _dropGuide = null;
+            _hotkeys?.Unregister(DropHotkeyId);
+            MemoryTrim.Schedule();
+        };
+        _dropGuide = guide;
+        guide.ShowAtTop();
+
+        // Run the drop after the hotkey message is handled: a drag's modal loop shouldn't start inside a window procedure.
+        if (_hotkeys?.Register(DropHotkeyId, key.Win32Modifiers, key.VirtualKey,
+                () => Dispatcher.BeginInvoke(() => DropAtPointer(target, imagePath, guide))) != true)
+            guide.ShowProblem($"{key.DisplayText} is in use by another app. Drag the panel's thumbnail in instead.");
+    }
+
+    private async void DropAtPointer(ShareTarget target, string imagePath, DropGuideWindow guide)
+    {
+        System.Drawing.Point point = Forms.Cursor.Position;
+        IntPtr window = AppWindows.RootWindowAt(point);
+        if (target.FocusProcess != null &&
+            !string.Equals(AppWindows.ProcessNameOf(window), target.FocusProcess, StringComparison.OrdinalIgnoreCase))
+        {
+            guide.ShowProblem($"The pointer isn't over {target.Label}. Point at the channel or thread, then press {_settings.ShareHotkey.DisplayText}.");
+            return;
+        }
+
+        // Ignore repeat presses while this drop is running.
+        _hotkeys?.Unregister(DropHotkeyId);
+        guide.Hide();
+        bool dropped;
+        try
+        {
+            dropped = await FileDropper.DropAt(imagePath, point.X, point.Y);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex);
+            dropped = false;
+        }
+        guide.Close();
+
+        if (dropped)
+            AppWindows.BringToFront(window);
+        else
+            _tray?.ShowError("Couldn't drop the screenshot", $"{target.Label} didn't accept it there. Drag the panel's thumbnail in instead.");
     }
 
     private void CopyPath(PostCapturePanel panel)
@@ -351,6 +413,7 @@ public partial class App : Application
     {
         _session?.Cancel();
         _picker?.Close();
+        _dropGuide?.Close();
         _panel?.Close();
         _settingsWindow?.Close();
         _hotkeys?.Dispose();

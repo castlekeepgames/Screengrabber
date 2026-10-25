@@ -29,6 +29,7 @@ public partial class SnipOverlayWindow : Window
         InitializeComponent();
         HintText.Text = $"{captureHotkey.DisplayText} for whole screen";
         Frozen.Source = ScreenCapture.ToBitmapSource(shot.Image);
+        Cursor = CrosshairCursor.For(Native.ScaleAt(shot.Bounds.X + shot.Bounds.Width / 2, shot.Bounds.Y + shot.Bounds.Height / 2));
 
         Root.SizeChanged += (_, _) => UpdateSelection(null);
         MouseLeftButtonDown += OnMouseDown;
