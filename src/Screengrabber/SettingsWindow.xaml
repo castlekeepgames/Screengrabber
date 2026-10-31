@@ -43,25 +43,33 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="8" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="8" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="Capture" />
-                <TextBlock Style="{StaticResource Note}" Text="Snip → whole screen → copy path → new snip" />
+                <TextBlock Style="{StaticResource Note}" Text="Snip → whole screen. After a capture: open folder, then new snip" />
             </StackPanel>
             <TextBox x:Name="CaptureHotkeyBox" Grid.Column="1" Style="{StaticResource HotkeyBox}" />
 
             <StackPanel Grid.Row="2" VerticalAlignment="Center">
+                <TextBlock Text="Copy path" />
+                <TextBlock Style="{StaticResource Note}" Text="Only active while the post-capture panel is showing" />
+            </StackPanel>
+            <TextBox x:Name="CopyPathHotkeyBox" Grid.Row="2" Grid.Column="1" Style="{StaticResource HotkeyBox}" />
+
+            <StackPanel Grid.Row="4" VerticalAlignment="Center">
                 <TextBlock Text="Copy image" />
                 <TextBlock Style="{StaticResource Note}" Text="Only active while the post-capture panel is showing" />
             </StackPanel>
-            <TextBox x:Name="CopyImageHotkeyBox" Grid.Row="2" Grid.Column="1" Style="{StaticResource HotkeyBox}" />
+            <TextBox x:Name="CopyImageHotkeyBox" Grid.Row="4" Grid.Column="1" Style="{StaticResource HotkeyBox}" />
 
-            <StackPanel Grid.Row="4" VerticalAlignment="Center">
+            <StackPanel Grid.Row="6" VerticalAlignment="Center">
                 <TextBlock Text="Share" />
-                <TextBlock Style="{StaticResource Note}" Text="Only active while the post-capture panel is showing" />
+                <TextBlock Style="{StaticResource Note}" Text="Panel showing, and to drop into an app" />
             </StackPanel>
-            <TextBox x:Name="ShareHotkeyBox" Grid.Row="4" Grid.Column="1" Style="{StaticResource HotkeyBox}" />
+            <TextBox x:Name="ShareHotkeyBox" Grid.Row="6" Grid.Column="1" Style="{StaticResource HotkeyBox}" />
         </Grid>
         <TextBlock Style="{StaticResource Note}" Margin="0,8,0,0"
                    Text="Click a box, then press the new combination. If nothing happens, another app already uses that combination. Hotkeys are paused while this window is open." />

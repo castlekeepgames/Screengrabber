@@ -26,11 +26,15 @@ public partial class PostCapturePanel : Window
     private readonly Rectangle _workArea;
 
     public string ImagePath { get; }
-    public bool PathCopied { get; private set; }
+    /// <summary>The capture key already opened the folder, so pressing it again starts a new snip.</summary>
+    public bool FolderOpened { get; private set; }
     internal Rectangle WorkArea => _workArea;
 
-    /// <summary>The "copy path" row was clicked (same as pressing the capture hotkey).</summary>
+    /// <summary>The "copy path" row was clicked (same as pressing the copy-path hotkey).</summary>
     public event EventHandler? CopyPathRequested;
+
+    /// <summary>The "open folder" row was clicked (same as pressing the capture hotkey).</summary>
+    public event EventHandler? OpenFolderRequested;
 
     /// <summary>The "copy image" row was clicked (same as pressing the copy-image hotkey).</summary>
     public event EventHandler? CopyImageRequested;
@@ -40,13 +44,14 @@ public partial class PostCapturePanel : Window
 
     /// <param name="workArea">The monitor's work area in physical pixels.</param>
     internal PostCapturePanel(string imagePath, byte[] png, int imageWidth, Rectangle workArea,
-        TimeSpan autoCloseAfter, Hotkey captureHotkey, Hotkey copyImageHotkey, Hotkey shareHotkey)
+        TimeSpan autoCloseAfter, Hotkey captureHotkey, Hotkey copyPathHotkey, Hotkey copyImageHotkey, Hotkey shareHotkey)
     {
         ImagePath = imagePath;
         _workArea = workArea;
         InitializeComponent();
 
         CaptureKeyText.Text = captureHotkey.DisplayText;
+        CopyPathKeyText.Text = copyPathHotkey.DisplayText;
         CopyImageKeyText.Text = copyImageHotkey.DisplayText;
         ShareKeyText.Text = shareHotkey.DisplayText;
 
@@ -64,6 +69,7 @@ public partial class PostCapturePanel : Window
         CloseButton.MouseLeftButtonUp += (_, _) => Close();
         FileName.MouseLeftButtonUp += (_, _) => ScreenshotStore.OpenFolder(Path.GetDirectoryName(ImagePath)!, ImagePath);
         HookUpThumbnailDrag();
+        OpenFolderRow.MouseLeftButtonUp += (_, _) => OpenFolderRequested?.Invoke(this, EventArgs.Empty);
         CopyPathRow.MouseLeftButtonUp += (_, _) => CopyPathRequested?.Invoke(this, EventArgs.Empty);
         CopyImageRow.MouseLeftButtonUp += (_, _) => CopyImageRequested?.Invoke(this, EventArgs.Empty);
         ShareRow.MouseLeftButtonUp += (_, _) => ShareRequested?.Invoke(this, EventArgs.Empty);
@@ -110,11 +116,13 @@ public partial class PostCapturePanel : Window
         RestartTimer();
     }
 
-    internal void MarkPathCopied()
+    internal void MarkFolderOpened()
     {
-        PathCopied = true;
-        MarkDone(CopyPathHint, "✓ Path copied");
+        FolderOpened = true;
+        MarkDone(OpenFolderHint, "✓ Folder opened");
     }
+
+    internal void MarkPathCopied() => MarkDone(CopyPathHint, "✓ Path copied");
 
     internal void MarkImageCopied() => MarkDone(CopyImageHint, "✓ Image copied");
 

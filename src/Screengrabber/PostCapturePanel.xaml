@@ -66,23 +66,30 @@
                 </Border>
 
                 <!-- Each row works by hotkey or by click. -->
-                <StackPanel x:Name="CopyPathRow" Orientation="Horizontal" Margin="0,0,0,6" Background="Transparent" Cursor="Hand">
+                <StackPanel x:Name="OpenFolderRow" Orientation="Horizontal" Margin="0,0,0,6" Background="Transparent" Cursor="Hand">
                     <Border Style="{StaticResource KeyChip}">
                         <TextBlock x:Name="CaptureKeyText" Style="{StaticResource KeyText}" Text="Ctrl+`" />
+                    </Border>
+                    <TextBlock x:Name="OpenFolderHint" Style="{StaticResource HintText}" Text="open folder" />
+                </StackPanel>
+
+                <StackPanel x:Name="CopyPathRow" Orientation="Horizontal" Margin="0,0,0,6" Background="Transparent" Cursor="Hand">
+                    <Border Style="{StaticResource KeyChip}">
+                        <TextBlock x:Name="CopyPathKeyText" Style="{StaticResource KeyText}" Text="Ctrl+1" />
                     </Border>
                     <TextBlock x:Name="CopyPathHint" Style="{StaticResource HintText}" Text="copy screenshot path" />
                 </StackPanel>
 
                 <StackPanel x:Name="CopyImageRow" Orientation="Horizontal" Margin="0,0,0,6" Background="Transparent" Cursor="Hand">
                     <Border Style="{StaticResource KeyChip}">
-                        <TextBlock x:Name="CopyImageKeyText" Style="{StaticResource KeyText}" Text="Ctrl+1" />
+                        <TextBlock x:Name="CopyImageKeyText" Style="{StaticResource KeyText}" Text="Ctrl+2" />
                     </Border>
                     <TextBlock x:Name="CopyImageHint" Style="{StaticResource HintText}" Text="copy image to clipboard" />
                 </StackPanel>
 
                 <StackPanel x:Name="ShareRow" Orientation="Horizontal" Background="Transparent" Cursor="Hand">
                     <Border Style="{StaticResource KeyChip}">
-                        <TextBlock x:Name="ShareKeyText" Style="{StaticResource KeyText}" Text="Ctrl+2" />
+                        <TextBlock x:Name="ShareKeyText" Style="{StaticResource KeyText}" Text="Ctrl+3" />
                     </Border>
                     <TextBlock Style="{StaticResource HintText}" Text="share" />
                 </StackPanel>

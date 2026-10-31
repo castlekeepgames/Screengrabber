@@ -26,7 +26,8 @@ public partial class WelcomeWindow : Window
         InitializeComponent();
 
         AddKeyRow(settings.CaptureHotkey, "Take a screenshot: drag a box. Press again for the whole screen.");
-        AddKeyRow(settings.CaptureHotkey, "After a screenshot: copy its file path");
+        AddKeyRow(settings.CaptureHotkey, "After a screenshot: open its folder");
+        AddKeyRow(settings.CopyPathHotkey, "After a screenshot: copy its file path");
         AddKeyRow(settings.CopyImageHotkey, "After a screenshot: copy the image");
         AddKeyRow(settings.ShareHotkey, "After a screenshot: share it to one of the apps below");
         ShareNote.Text = $"These appear when you press {settings.ShareHotkey.DisplayText}. Untick any you don't want; you can change this later in Settings.";

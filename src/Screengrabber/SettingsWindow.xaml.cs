@@ -14,6 +14,7 @@ public partial class SettingsWindow : Window
     private readonly Settings _original;
     private readonly Func<Hotkey, bool> _isHotkeyAvailable;
     private Hotkey _capture;
+    private Hotkey _copyPath;
     private Hotkey _copyImage;
     private Hotkey _share;
     private List<ShareTarget> _targets;
@@ -29,12 +30,15 @@ public partial class SettingsWindow : Window
         InitializeComponent();
 
         _capture = current.CaptureHotkey;
+        _copyPath = current.CopyPathHotkey;
         _copyImage = current.CopyImageHotkey;
         _share = current.ShareHotkey;
         CaptureHotkeyBox.Text = _capture.DisplayText;
+        CopyPathHotkeyBox.Text = _copyPath.DisplayText;
         CopyImageHotkeyBox.Text = _copyImage.DisplayText;
         ShareHotkeyBox.Text = _share.DisplayText;
         HookUpRecorder(CaptureHotkeyBox, hotkey => _capture = hotkey, () => _capture);
+        HookUpRecorder(CopyPathHotkeyBox, hotkey => _copyPath = hotkey, () => _copyPath);
         HookUpRecorder(CopyImageHotkeyBox, hotkey => _copyImage = hotkey, () => _copyImage);
         HookUpRecorder(ShareHotkeyBox, hotkey => _share = hotkey, () => _share);
 
@@ -124,10 +128,13 @@ public partial class SettingsWindow : Window
 
     private void Save()
     {
-        var hotkeys = new (string Name, Hotkey Key)[] { ("capture", _capture), ("copy image", _copyImage), ("share", _share) };
+        var hotkeys = new (string Name, Hotkey Key)[]
+        {
+            ("capture", _capture), ("copy path", _copyPath), ("copy image", _copyImage), ("share", _share),
+        };
         if (hotkeys.Select(h => h.Key).Distinct().Count() < hotkeys.Length)
         {
-            ShowError("Capture, Copy image and Share each need a different hotkey.");
+            ShowError("Capture, Copy path, Copy image and Share each need a different hotkey.");
             return;
         }
         // Our own hotkeys are switched off while this window is open, so only other apps can make these fail.
@@ -159,6 +166,7 @@ public partial class SettingsWindow : Window
 
         Settings updated = _original.Clone();
         updated.CaptureHotkey = _capture;
+        updated.CopyPathHotkey = _copyPath;
         updated.CopyImageHotkey = _copyImage;
         updated.ShareHotkey = _share;
         updated.SaveFolder = string.Equals(Path.GetFullPath(folder), Path.GetFullPath(Settings.DefaultSaveFolder), StringComparison.OrdinalIgnoreCase)

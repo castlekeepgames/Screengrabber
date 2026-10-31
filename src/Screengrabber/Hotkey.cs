@@ -17,8 +17,9 @@ internal readonly record struct Hotkey(ModifierKeys Modifiers, Key Key)
 
     /// <summary>Ctrl + the key left of 1, whatever character it types on this keyboard layout.</summary>
     public static readonly Hotkey DefaultCapture = new(ModifierKeys.Control, KeyLeftOfOne());
-    public static readonly Hotkey DefaultCopyImage = new(ModifierKeys.Control, Key.D1);
-    public static readonly Hotkey DefaultShare = new(ModifierKeys.Control, Key.D2);
+    public static readonly Hotkey DefaultCopyPath = new(ModifierKeys.Control, Key.D1);
+    public static readonly Hotkey DefaultCopyImage = new(ModifierKeys.Control, Key.D2);
+    public static readonly Hotkey DefaultShare = new(ModifierKeys.Control, Key.D3);
 
     /// <summary>Keys that are fine as a hotkey with no modifier, because nothing types them.</summary>
     private static readonly HashSet<Key> StandaloneKeys = new()

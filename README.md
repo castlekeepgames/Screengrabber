@@ -9,18 +9,19 @@ A Windows tray app for fast screenshots. See [SCOPE.md](SCOPE.md) for the full p
 | Ctrl+\` | Start a snip: drag a box |
 | Ctrl+\` again | Capture the whole monitor under the mouse |
 | Esc / right-click | Cancel the snip |
-| Ctrl+\` after a capture | Copy the file path |
-| Ctrl+1 after a capture | Copy the image to the clipboard |
-| Ctrl+2 after a capture | Share: pick one of your apps by number (`1`, `2`, …) |
+| Ctrl+\` after a capture | Open the folder, with the screenshot selected |
+| Ctrl+1 after a capture | Copy the file path |
+| Ctrl+2 after a capture | Copy the image to the clipboard |
+| Ctrl+3 after a capture | Share: pick one of your apps by number (`1`, `2`, …) |
 | Ctrl+\` once more | Start a new snip |
 
-Screenshots go to `Desktop\Screenshots` as `Screenshot_YYYY-MM-DD_HH-mm-ss.png`. Nothing is copied to the clipboard until you ask. A panel in the upper right shows the shot for 8 seconds (hover to keep it open). Click the thumbnail to open the image, the filename to show it in its folder, or any of the three rows to do that action.
+Screenshots go to `Desktop\Screenshots` as `Screenshot_YYYY-MM-DD_HH-mm-ss.png`. Nothing is copied to the clipboard until you ask. A panel in the upper right shows the shot for 8 seconds (hover to keep it open). Click the thumbnail to open the image, the filename to show it in its folder, or any of the four rows to do that action.
 
-### Sharing (Ctrl+2)
+### Sharing (Ctrl+3)
 
 Sharing never touches your clipboard and never presses Send:
 
-Pick a target and it comes to the front, with a banner at the top of the screen. Go to the chat, channel or thread it should go to, point at it, and press Ctrl+2 again. The file is dropped right there.
+Pick a target and it comes to the front, with a banner at the top of the screen. Go to the chat, channel or thread it should go to, point at it, and press Ctrl+3 again. The file is dropped right there.
 
 - **Slack and Discord:** also open their channel switcher (Ctrl+K) for you.
 - **Email:** a new message in your default mail app with the file attached (Outlook classic, Thunderbird, Mailbird…, 64- or 32-bit). Mail apps that can't do that (new Outlook, webmail) get a blank email to point at instead.

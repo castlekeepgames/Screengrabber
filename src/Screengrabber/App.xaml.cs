@@ -15,6 +15,7 @@ public partial class App : Application
     private const int ShareHotkeyId = 2;
     private const int CopyImageHotkeyId = 3;
     private const int DropHotkeyId = 4;
+    private const int CopyPathHotkeyId = 5;
     private const int TestHotkeyId = 99;
 
     private Mutex? _singleInstance;
@@ -34,8 +35,8 @@ public partial class App : Application
 
     /// <summary>True between the end of a snip and the panel appearing (encoding + saving).</summary>
     private bool _saving;
-    /// <summary>Capture hotkey pressed while saving: copy the path as soon as the file exists.</summary>
-    private bool _copyPathWhenSaved;
+    /// <summary>Capture hotkey pressed while saving: open the folder as soon as the file exists.</summary>
+    private bool _openFolderWhenSaved;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -306,7 +307,7 @@ public partial class App : Application
 
     /// <summary>
     /// The capture hotkey steps through the flow:
-    /// snip → (again) whole screen → (again) copy path → (again) start a new snip.
+    /// snip → (again) whole screen → (again) open the folder → (again) start a new snip.
     /// </summary>
     private void OnCaptureHotkey()
     {
@@ -316,11 +317,11 @@ public partial class App : Application
         }
         else if (_saving)
         {
-            _copyPathWhenSaved = true;
+            _openFolderWhenSaved = true;
         }
-        else if (_panel is { PathCopied: false })
+        else if (_panel is { FolderOpened: false })
         {
-            CopyPath(_panel);
+            OpenFolder(_panel);
         }
         else
         {
@@ -360,7 +361,7 @@ public partial class App : Application
         Rectangle workArea = Forms.Screen.FromPoint(Forms.Cursor.Position).WorkingArea;
         string folder = _settings.ResolvedSaveFolder;
         _saving = true;
-        _copyPathWhenSaved = false;
+        _openFolderWhenSaved = false;
         try
         {
             int width = shot.Width;
@@ -371,8 +372,8 @@ public partial class App : Application
             path = await Task.Run(() => ScreenshotStore.Save(png, folder));
 
             ShowPanel(path, png, width, workArea);
-            if (_copyPathWhenSaved && _panel != null)
-                CopyPath(_panel);
+            if (_openFolderWhenSaved && _panel != null)
+                OpenFolder(_panel);
         }
         catch (Exception ex)
         {
@@ -382,7 +383,7 @@ public partial class App : Application
         finally
         {
             _saving = false;
-            _copyPathWhenSaved = false;
+            _openFolderWhenSaved = false;
         }
     }
 
@@ -390,7 +391,8 @@ public partial class App : Application
     {
         _panel?.Close();
         var panel = new PostCapturePanel(path, png, imageWidth, workArea, _settings.PanelTimeout,
-            _settings.CaptureHotkey, _settings.CopyImageHotkey, _settings.ShareHotkey);
+            _settings.CaptureHotkey, _settings.CopyPathHotkey, _settings.CopyImageHotkey, _settings.ShareHotkey);
+        panel.OpenFolderRequested += (_, _) => OpenFolder(panel);
         panel.CopyPathRequested += (_, _) => CopyPath(panel);
         panel.CopyImageRequested += (_, _) => CopyImage(panel);
         panel.ShareRequested += (_, _) => OpenSharePicker();
@@ -399,6 +401,7 @@ public partial class App : Application
             if (_panel != panel)
                 return;
             _panel = null;
+            _hotkeys?.Unregister(CopyPathHotkeyId);
             _hotkeys?.Unregister(CopyImageHotkeyId);
             _hotkeys?.Unregister(ShareHotkeyId);
             MemoryTrim.Schedule();
@@ -410,8 +413,14 @@ public partial class App : Application
         // If another app owns one, the panel's rows are still clickable.
         if (_tray?.Paused != true && _hotkeys != null)
         {
+            Hotkey copyPath = _settings.CopyPathHotkey;
             Hotkey copyImage = _settings.CopyImageHotkey;
             Hotkey share = _settings.ShareHotkey;
+            _hotkeys.Register(CopyPathHotkeyId, copyPath.Win32Modifiers, copyPath.VirtualKey, () =>
+            {
+                if (_panel != null)
+                    CopyPath(_panel);
+            });
             _hotkeys.Register(CopyImageHotkeyId, copyImage.Win32Modifiers, copyImage.VirtualKey, () =>
             {
                 if (_panel != null)
@@ -509,6 +518,12 @@ public partial class App : Application
             AppWindows.BringToFront(window);
         else
             _tray?.ShowError("Couldn't drop the screenshot", $"{target.Label} didn't accept it there. Drag the panel's thumbnail in instead.");
+    }
+
+    private void OpenFolder(PostCapturePanel panel)
+    {
+        ScreenshotStore.OpenFolder(Path.GetDirectoryName(panel.ImagePath)!, panel.ImagePath);
+        panel.MarkFolderOpened();
     }
 
     private void CopyPath(PostCapturePanel panel)

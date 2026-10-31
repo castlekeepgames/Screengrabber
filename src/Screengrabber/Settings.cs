@@ -59,8 +59,11 @@ internal sealed class ShareTarget
 
 internal sealed class Settings
 {
-    /// <summary>Steps through snip → whole screen → copy path.</summary>
+    /// <summary>Steps through snip → whole screen → open the folder → new snip.</summary>
     public Hotkey CaptureHotkey { get; set; } = Hotkey.DefaultCapture;
+
+    /// <summary>Copies the file path. Only registered while the post-capture panel is showing.</summary>
+    public Hotkey CopyPathHotkey { get; set; } = Hotkey.DefaultCopyPath;
 
     /// <summary>Copies the image to the clipboard. Only registered while the post-capture panel is showing.</summary>
     public Hotkey CopyImageHotkey { get; set; } = Hotkey.DefaultCopyImage;
@@ -109,10 +112,11 @@ internal sealed class Settings
     /// 2: share hotkey moved from Ctrl+Home to Ctrl+3; image no longer copied automatically.
     /// 3: share targets deliver by drop/typing instead of the clipboard.
     /// 4: share hotkey Ctrl+3 → Ctrl+2; Claude Code, Codex and Grok Bot use point-and-drop like Slack.
+    /// 5: after a capture the capture key opens the folder; copy path Ctrl+1, copy image Ctrl+2, share Ctrl+3.
     /// </summary>
     public int Version { get; set; }
 
-    private const int CurrentVersion = 4;
+    private const int CurrentVersion = 5;
 
     public static List<ShareTarget> CloneTargets(IEnumerable<ShareTarget> targets) =>
         JsonSerializer.Deserialize<List<ShareTarget>>(JsonSerializer.Serialize(targets, JsonOptions), JsonOptions)!;
@@ -196,6 +200,21 @@ internal sealed class Settings
                 if (target.Method == ShareMethod.App && target.FocusProcess is "claude" or "ChatGPT" or "Grok Bot")
                     target.Delivery = ShareDelivery.DropAtPointer;
             }
+        }
+
+        if (Version < 5)
+        {
+            // Move the old defaults (image Ctrl+1, share Ctrl+2) up one to make room for copy path on Ctrl+1.
+            var ctrl = System.Windows.Input.ModifierKeys.Control;
+            if (CopyImageHotkey == new Hotkey(ctrl, System.Windows.Input.Key.D1) && ShareHotkey == new Hotkey(ctrl, System.Windows.Input.Key.D2))
+            {
+                CopyImageHotkey = Hotkey.DefaultCopyImage;
+                ShareHotkey = Hotkey.DefaultShare;
+            }
+            // Customised keys stay; give copy path the first free Ctrl+digit.
+            var taken = new HashSet<Hotkey> { CaptureHotkey, CopyImageHotkey, ShareHotkey };
+            for (var key = System.Windows.Input.Key.D1; taken.Contains(CopyPathHotkey) && key <= System.Windows.Input.Key.D9; key++)
+                CopyPathHotkey = new Hotkey(ctrl, key);
         }
         Version = CurrentVersion;
     }

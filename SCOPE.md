@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-Take a screenshot and get it where it needs to go with as few keystrokes as possible. One hotkey, **Ctrl+\`** (the backtick key just left of 1), drives the whole flow: snip, full screen, save, copy path. After a capture, **Ctrl+1** copies the image and **Ctrl+2** sends the shot to a destination.
+Take a screenshot and get it where it needs to go with as few keystrokes as possible. One hotkey, **Ctrl+\`** (the backtick key just left of 1), drives the whole flow: snip, full screen, save, open the folder. After a capture, **Ctrl+1** copies the path, **Ctrl+2** the image, and **Ctrl+3** sends the shot to a destination.
 
 **Target user:** one person (me), on Windows 11, who takes a lot of screenshots and pastes them into Slack, email, and AI coding/chat tools.
 
@@ -17,10 +17,11 @@ The app runs in the background with a tray icon. Pressing Ctrl+\` again moves yo
 | **1st** Ctrl+\` | Idle | The screen dims and a crosshair appears. **Snip mode starts right away**, so you just drag a box. Upper-right hint: **"Ctrl+\` for whole screen"** |
 | Drag a box | In snip mode | Captures the region → **saved to `Desktop\Screenshots`** → shows the post-capture panel (below) |
 | **2nd** Ctrl+\` | In snip mode (before dragging) | Captures the **whole monitor the mouse is on** → saved → shows the post-capture panel |
-| **3rd** Ctrl+\` | Post-capture panel visible | Copies the **full file path** to the clipboard. The panel shows "Path copied ✓" and **stays open**, so Ctrl+1 and Ctrl+2 still work |
+| **3rd** Ctrl+\` | Post-capture panel visible | Opens the **folder** in File Explorer with the screenshot selected. The panel shows "Folder opened ✓" and **stays open**, so Ctrl+1–3 still work |
 | **4th** Ctrl+\` | Panel visible, path already copied | Closes the panel and starts a **new snip** (so you don't have to wait for the panel to close) |
-| **Ctrl+1** | Post-capture panel visible | Copies the **image** to the clipboard ("Image copied ✓") |
-| **Ctrl+2** | Post-capture panel visible | Opens the **Share picker** |
+| **Ctrl+1** | Post-capture panel visible | Copies the **full file path** to the clipboard ("Path copied ✓") |
+| **Ctrl+2** | Post-capture panel visible | Copies the **image** to the clipboard ("Image copied ✓") |
+| **Ctrl+3** | Post-capture panel visible | Opens the **Share picker** |
 | Esc | Any state | Cancels or closes the overlay or panel (a shot that was already saved stays saved) |
 
 ### Post-capture panel (upper right, small, always on top)
@@ -30,8 +31,10 @@ The app runs in the background with a tray icon. Pressing Ctrl+\` again moves yo
 │ ✓ Saved  Screenshot_2026-10-24…  │
 │ [thumbnail]                      │
 │ Ctrl+`    : copy screenshot path │
-│ Ctrl+1    : copy image           │
-│ Ctrl+2    : share                │
+│ Ctrl+`    : open folder          │
+│ Ctrl+1    : copy screenshot path │
+│ Ctrl+2    : copy image           │
+│ Ctrl+3    : share                │
 └──────────────────────────────────┘
 ```
 
@@ -40,7 +43,7 @@ The app runs in the background with a tray icon. Pressing Ctrl+\` again moves yo
 - Clicking the thumbnail opens the image. Clicking the filename opens the folder with the file selected.
 - After it closes, the next Ctrl+\` starts a **new snip** (step 1 again).
 
-### Share picker (opens on Ctrl+2)
+### Share picker (opens on Ctrl+3)
 
 A small popup with five large buttons, each with its own number key for keyboard-only use:
 
@@ -52,7 +55,7 @@ A small popup with five large buttons, each with its own number key for keyboard
 
 ### 3.1 Hotkeys
 - **Ctrl+\`** is registered globally while the app runs. It is registered by the physical key (virtual key `VK_OEM_3`), so it stays the same key on keyboard layouts where that key isn't a backtick.
-- **Ctrl+1** and **Ctrl+2** are registered **only while the post-capture panel is visible**, so they keep working normally in other apps (e.g. switching browser tabs).
+- **Ctrl+1**, **Ctrl+2** and **Ctrl+3** are registered **only while the post-capture panel is visible**, so they keep working normally in other apps (e.g. switching browser tabs).
 - Both hotkeys can be changed in settings.
 - If another app already owns the hotkey, show a tray notification explaining that.
 - Known conflict: VS Code uses Ctrl+\` to show and hide its terminal. While Screengrabber is running, that shortcut won't reach VS Code.
@@ -62,7 +65,7 @@ A small popup with five large buttons, each with its own number key for keyboard
 - **Whole screen:** captures the monitor the mouse cursor is on.
 - Must work across multiple monitors with different DPI scaling (per-monitor DPI aware) with no blur and no offset.
 - The overlay should appear in under 200 ms after the hotkey.
-- Nothing goes on the clipboard automatically. Ctrl+\` copies the path, Ctrl+1 the image.
+- Nothing goes on the clipboard automatically. Ctrl+1 copies the path, Ctrl+2 the image.
 
 ### 3.3 Saving
 - Folder: `<Desktop>\Screenshots`. The Desktop location comes from Windows (the Known Folder API), so it still works when OneDrive redirects the Desktop. The folder is created if it's missing.
@@ -116,12 +119,12 @@ Recipe fields: `label`, `hotkeyNumber`, `clipboard: image | path | none`, `launc
 1. Ctrl+\` from any app → crosshair overlay ready within 200 ms; dragging a box saves a correct PNG to `Desktop\Screenshots`.
 2. Ctrl+\` twice → a full-screen PNG of the monitor under the cursor is saved.
 3. Ctrl+\` after a capture → `Ctrl+V` in Notepad pastes the exact full path, and the panel is still open.
-4. Ctrl+2 after a capture → share picker opens:
+4. Ctrl+3 after a capture → share picker opens:
    - Slack: Slack is in front, Ctrl+V pastes the image.
    - Email: a new Mailbird message opens with the PNG attached, or with the image ready to paste if MAPI isn't supported.
    - Claude Code / Codex: the desktop app is in front, Ctrl+V pastes the path.
    - Grok Bot: the Grok app is in front, Ctrl+V pastes the image.
-5. Ctrl+1 and Ctrl+2 do nothing special when no panel is showing (normal app behavior is untouched).
+5. Ctrl+1, Ctrl+2 and Ctrl+3 do nothing special when no panel is showing (normal app behavior is untouched).
 6. Works correctly on a 2-monitor setup with mixed 100% / 150% scaling.
 7. Survives a reboot (starts with Windows) and runs idle at under 50 MB RAM.
 
@@ -170,6 +173,7 @@ Recipe fields: `label`, `hotkeyNumber`, `clipboard: image | path | none`, `launc
 | Email on any PC (2026-10-24) | 64-bit app, with a 32-bit MAPI helper for 32-bit-only mail DLLs, and point-and-drop when there's no MAPI. Replaces "the whole app is 32-bit for Mailbird" |
 | Start with Windows (2026-10-24, v1.2.1) | A per-user **scheduled task at sign-in** (10 s delay, no time limit) instead of the HKCU Run key. On a real sign-in, Windows skipped the Run entry: it walks the key by position, and apps that rewrite their own entry as they start shift the newest entries past it. The Run key is only a fallback now. The uninstaller removes the task |
 | Share key (2026-10-24) | **Ctrl+2** instead of Ctrl+3, for opening the picker and for the drop step. Existing settings are migrated |
+| Post-capture keys, v1.3.0 (2026-10-26) | **Ctrl+\`** opens the folder (screenshot selected), **Ctrl+1** copy path, **Ctrl+2** copy image, **Ctrl+3** share (and the drop step). Open folder follows the capture key, since one key can't be two global hotkeys; pressing it again starts a new snip. Settings files from before are migrated |
 
 ## 9. Confirmed during the build
 
